@@ -1,0 +1,11 @@
+# Dead route files (2026-11-16): superseded by the consolidated dynamic
+# routes api/auth/[group]/[action].ts and api/invitations/[action].ts.
+# They stay in git for history but must NOT be deployed: the Vercel Hobby
+# plan allows at most 12 Serverless Functions per deployment, and with
+# these files the count was 14 (build error
+# exceeded_serverless_functions_per_deployment). Delete them from the repo
+# when convenient — then remove these lines too.
+api/auth/otp/\[action\].ts
+api/auth/wallet/\[action\].ts
+api/invitations/claim.ts
+api/invitations/peek.ts
