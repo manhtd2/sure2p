@@ -1,0 +1,11 @@
+import { useEffect, useState } from 'react'
+
+/** Current unix time in seconds, refreshed on an interval. For display only; the chain clock decides. */
+export function useNow(intervalMs = 1000): number {
+  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000))
+  useEffect(() => {
+    const id = setInterval(() => setNow(Math.floor(Date.now() / 1000)), intervalMs)
+    return () => clearInterval(id)
+  }, [intervalMs])
+  return now
+}

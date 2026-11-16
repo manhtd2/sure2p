@@ -1,0 +1,484 @@
+/* Perfect-transaction hero for the sign-in page — a lightweight CSS/SVG
+   recreation of the sure2p homepage GSAP animation (no GSAP dependency).
+   One cycle is 29s: one full loop (~24s) + a 5s hold at the final state,
+   then it repeats. Base styles (no animation) are the FINAL state, so
+   `prefers-reduced-motion` shows a static completed transaction. */
+
+.pt-hero {
+  position: relative;
+  width: 100%;
+  height: 560px;
+  overflow: hidden;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  background:
+    radial-gradient(600px 300px at 18% 8%, rgba(168, 85, 247, 0.35), transparent 65%),
+    radial-gradient(520px 320px at 85% 22%, rgba(34, 211, 238, 0.28), transparent 65%),
+    radial-gradient(700px 420px at 50% 100%, rgba(45, 212, 191, 0.14), transparent 70%),
+    linear-gradient(180deg, #0b0620 0%, #12082e 55%, #0a0618 100%);
+  box-shadow: 0 0 60px rgba(139, 92, 246, 0.25), inset 0 0 80px rgba(0, 0, 0, 0.35);
+}
+
+@media (min-width: 640px) {
+  .pt-hero {
+    height: 620px;
+  }
+}
+
+.pt-hero svg.pt-stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.pt-nebula {
+  animation: ptNebula 24s ease-in-out infinite alternate;
+}
+
+@keyframes ptNebula {
+  from { opacity: 0.55; }
+  to { opacity: 1; }
+}
+
+.pt-star {
+  fill: #fff;
+  animation: ptTwinkle 3s ease-in-out infinite alternate;
+}
+
+@keyframes ptTwinkle {
+  from { opacity: 0.15; }
+  to { opacity: 1; }
+}
+
+.pt-shoot {
+  stroke: #bae6fd;
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0;
+  animation: ptShoot 7s linear infinite;
+}
+
+@keyframes ptShoot {
+  0%, 55% { opacity: 0; transform: translate(0, 0); }
+  60% { opacity: 0.9; }
+  72% { opacity: 0; transform: translate(-180px, 90px); }
+  100% { opacity: 0; transform: translate(-180px, 90px); }
+}
+
+.pt-node {
+  filter: drop-shadow(0 0 14px rgba(34, 211, 238, 0.35));
+}
+
+.pt-node-seller {
+  filter: drop-shadow(0 0 14px rgba(168, 85, 247, 0.45));
+}
+
+.pt-node-escrow {
+  filter: drop-shadow(0 0 16px rgba(45, 212, 191, 0.4));
+}
+
+.pt-node-label {
+  fill: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: 'Space Grotesk', sans-serif;
+  text-anchor: middle;
+}
+
+.pt-node-sub {
+  fill: #c7d2fe;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  text-anchor: middle;
+}
+
+.pt-orbit {
+  fill: none;
+  stroke: rgba(45, 212, 191, 0.5);
+  stroke-width: 1;
+  stroke-dasharray: 4 6;
+  animation: ptOrbitSpin 40s linear infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes ptOrbitSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* --- The Buyer–Seller connection: dashed line, drawn by the paper --- */
+.pt-line-dashed {
+  stroke: url(#ptGradConnect);
+  stroke-width: 2.5;
+  stroke-dasharray: 8 8;
+  opacity: 1;
+  animation: ptLineDashed 29s linear infinite;
+}
+
+@keyframes ptLineDashed {
+  0%, 13.8% { opacity: 0; }
+  16%, 100% { opacity: 1; }
+}
+
+.pt-line-draw {
+  stroke: #7dd3fc;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  opacity: 0;
+  animation: ptLineDraw 29s linear infinite;
+}
+
+@keyframes ptLineDraw {
+  0%, 3.4% { stroke-dashoffset: 100; opacity: 0; }
+  4% { opacity: 1; }
+  13.8% { stroke-dashoffset: 0; opacity: 1; }
+  16%, 100% { stroke-dashoffset: 0; opacity: 0; }
+}
+
+/* --- Flying items (offset-path keeps them on the SVG's own coordinates) --- */
+.pt-paper {
+  opacity: 0;
+  offset-path: path('M120 300 L780 300');
+  animation: ptPaper 29s linear infinite;
+}
+
+@keyframes ptPaper {
+  0%, 3.4% { offset-distance: 0%; opacity: 0; }
+  4.5% { opacity: 1; }
+  13.8% { offset-distance: 100%; opacity: 1; }
+  17%, 100% { offset-distance: 100%; opacity: 0; }
+}
+
+.pt-coin {
+  opacity: 0;
+  offset-path: path('M120 300 C 260 130, 350 95, 450 88 C 550 95, 640 130, 780 300');
+  animation: ptCoin 29s linear infinite;
+}
+
+@keyframes ptCoin {
+  0%, 17.2% { offset-distance: 0%; opacity: 0; }
+  18% { opacity: 1; }
+  27.6% { offset-distance: 50%; opacity: 1; }
+  28.5%, 62% { offset-distance: 50%; opacity: 0; }
+  63% { opacity: 1; }
+  72% { offset-distance: 100%; opacity: 1; }
+  73%, 100% { offset-distance: 100%; opacity: 0; }
+}
+
+.pt-goods {
+  opacity: 0;
+  offset-path: path('M780 300 C 660 440, 560 470, 450 468 C 340 470, 240 440, 120 300');
+  animation: ptGoods 29s linear infinite;
+}
+
+@keyframes ptGoods {
+  0%, 41% { offset-distance: 0%; opacity: 0; }
+  42% { opacity: 1; }
+  47% { offset-distance: 36%; opacity: 1; }
+  48% { offset-distance: 44%; opacity: 0; }
+  50% { offset-distance: 56%; opacity: 0; }
+  51% { offset-distance: 62%; opacity: 1; }
+  52% { offset-distance: 100%; opacity: 1; }
+  53%, 100% { offset-distance: 100%; opacity: 0; }
+}
+
+/* --- Badges: locks and checks on the nodes (base = final state) --- */
+.pt-lock {
+  opacity: 0;
+  animation: ptLockOn 29s linear infinite;
+}
+
+@keyframes ptLockOn {
+  0%, 17.2% { opacity: 0; }
+  18%, 62% { opacity: 1; }
+  63%, 100% { opacity: 0; }
+}
+
+.pt-seller-lock {
+  opacity: 0;
+  animation: ptSellerLock 29s linear infinite;
+}
+
+@keyframes ptSellerLock {
+  0%, 41% { opacity: 0; }
+  42%, 72% { opacity: 1; }
+  73%, 100% { opacity: 0; }
+}
+
+.pt-seller-check {
+  opacity: 1;
+  animation: ptSellerCheck 29s linear infinite;
+}
+
+@keyframes ptSellerCheck {
+  0%, 13.8% { opacity: 0; }
+  14.5%, 41% { opacity: 1; }
+  42%, 72% { opacity: 0; }
+  73%, 100% { opacity: 1; }
+}
+
+.pt-check {
+  opacity: 1;
+  animation: ptCheckOn 29s linear infinite;
+}
+
+@keyframes ptCheckOn {
+  0%, 62% { opacity: 0; }
+  63%, 100% { opacity: 1; }
+}
+
+.pt-escrow-pill {
+  opacity: 0;
+  animation: ptLockOn 29s linear infinite;
+}
+
+/* --- Seller working: hammer taps, stars burst from the hammer face --- */
+.pt-hammer {
+  opacity: 0;
+  animation: ptHammer 29s linear infinite;
+}
+
+@keyframes ptHammer {
+  0%, 31% { opacity: 0; }
+  32%, 40% { opacity: 1; }
+  41%, 100% { opacity: 0; }
+}
+
+.pt-hammer-tap {
+  transform-box: fill-box;
+  transform-origin: 85% 90%;
+  animation: ptHammerTap 29s linear infinite;
+}
+
+@keyframes ptHammerTap {
+  0%, 31% { transform: rotate(-16deg); }
+  34% { transform: rotate(10deg); }
+  36.5% { transform: rotate(-16deg); }
+  39% { transform: rotate(10deg); }
+  41%, 100% { transform: rotate(-16deg); }
+}
+
+.pt-hammer-star {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ptHammerStar 29s linear infinite;
+}
+
+@keyframes ptHammerStar {
+  0%, 33.5% { opacity: 0; transform: translate(0, 0) scale(0.3); }
+  35% { opacity: 1; transform: translate(calc(var(--dx, 8px) * 0.5), calc(var(--dy, -10px) * 0.5)) scale(1); }
+  38% { opacity: 0; transform: translate(var(--dx, 8px), var(--dy, -10px)) scale(1.1); }
+  39% { opacity: 0; transform: translate(0, 0) scale(0.3); }
+  40.5% { opacity: 1; transform: translate(calc(var(--dx, 8px) * -0.5), calc(var(--dy, -10px) * 0.5)) scale(1); }
+  43%, 100% { opacity: 0; transform: translate(calc(var(--dx, 8px) * -1), var(--dy, -10px)) scale(1.1); }
+}
+
+/* --- Buyer checking: magnifier orbits one spot, handle keeps its direction --- */
+.pt-lens {
+  opacity: 0;
+  animation: ptLens 29s linear infinite;
+}
+
+@keyframes ptLens {
+  0%, 55% { opacity: 0; }
+  56%, 62% { opacity: 1; }
+  63%, 100% { opacity: 0; }
+}
+
+.pt-lens-orbit {
+  animation: ptLensOrbit 29s linear infinite;
+}
+
+@keyframes ptLensOrbit {
+  0%, 55% { transform: translate(0, 0) rotate(0deg); }
+  57% { transform: translate(3px, -2px) rotate(0deg); }
+  59% { transform: translate(0, -4px) rotate(0deg); }
+  61% { transform: translate(-3px, -2px) rotate(0deg); }
+  62%, 100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+/* --- Apps frame (HTML overlay, aligned with the middle of the goods path) --- */
+.pt-apps {
+  opacity: 0;
+  animation: ptApps 29s linear infinite;
+}
+
+@keyframes ptApps {
+  0%, 41% { opacity: 0; }
+  42.5%, 52% { opacity: 1; }
+  53.5%, 100% { opacity: 0; }
+}
+
+.pt-apps-frame {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(45, 212, 191, 0.5);
+  background: rgba(13, 10, 40, 0.85);
+  box-shadow: 0 0 24px rgba(45, 212, 191, 0.25);
+  backdrop-filter: blur(8px);
+}
+
+.pt-app-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 999px;
+  color: #fff;
+}
+
+/* --- Hero overlay copy + CTA --- */
+.pt-hero-copy {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.25rem 1rem 0;
+  text-align: center;
+  pointer-events: none;
+}
+
+.pt-hero-copy .pt-cta {
+  pointer-events: auto;
+}
+
+.pt-hero-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #fff;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6);
+}
+
+.pt-hero-sub {
+  font-size: 0.85rem;
+  color: #c7d2fe;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.6);
+}
+
+.pt-hero-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #a5f3fc;
+  border: 1px solid rgba(34, 211, 238, 0.45);
+  background: rgba(34, 211, 238, 0.12);
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+}
+
+.pt-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 46px;
+  padding: 0 1.5rem;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(90deg, #22d3ee, #a855f7);
+  box-shadow: 0 8px 30px rgba(168, 85, 247, 0.55);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pt-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 36px rgba(168, 85, 247, 0.7);
+}
+
+.pt-cta:active {
+  transform: scale(0.98);
+}
+
+/* --- Cosmic login card (same deep-space glass style) --- */
+.signin-cosmic {
+  color: #eef2ff;
+}
+
+.signin-cosmic h1 {
+  color: #fff;
+}
+
+.signin-cosmic .card {
+  background: rgba(16, 12, 44, 0.78);
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.12), 0 18px 50px rgba(0, 0, 0, 0.55);
+}
+
+.signin-cosmic .label {
+  color: #a5b4fc;
+}
+
+.signin-cosmic .field {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(148, 163, 255, 0.35);
+  color: #fff;
+}
+
+.signin-cosmic .field::placeholder {
+  color: #7c86b3;
+}
+
+.signin-cosmic .field:disabled {
+  opacity: 0.55;
+}
+
+.signin-cosmic .btn-primary {
+  background: linear-gradient(90deg, #22d3ee, #a855f7);
+  color: #fff;
+}
+
+.signin-cosmic .btn-primary:hover:not(:disabled) {
+  background: linear-gradient(90deg, #06b6d4, #9333ea);
+}
+
+.signin-cosmic .btn-ghost {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(148, 163, 255, 0.3);
+  color: #e0e7ff;
+}
+
+.signin-cosmic .chip {
+  background: rgba(255, 255, 255, 0.1);
+  color: #c7d2fe;
+}
+
+.signin-cosmic .text-\[var\(--muted\)\] {
+  color: #aab3d6;
+}
+
+.signin-cosmic .text-\[var\(--ink-2\)\] {
+  color: #dbe2ff;
+}
+
+.signin-cosmic .text-\[var\(--danger\)\] {
+  color: #fda4af;
+}
+
+.signin-cosmic .text-\[var\(--warn\)\] {
+  color: #fcd34d;
+}
+
+/* Reduced motion: freeze on the final state (the base styles already are
+   the completed transaction) and stop the twinkle/shooting stars. */
+@media (prefers-reduced-motion: reduce) {
+  .pt-hero *,
+  .pt-hero {
+    animation: none !important;
+  }
+}

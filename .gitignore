@@ -1,0 +1,15 @@
+
+# sure2p
+server/data/
+*.sqlite*
+.env
+.env.*
+!.env.example
+.circle/
+recovery_file*
+node_modules/
+dist/
+.DS_Store
+contracts/cache/
+.vercel
+.env*
