@@ -153,7 +153,18 @@ step prominently.
   `/api/transactions` 401, full mock-OTP login (request → verify → session
   cookie → authenticated `/me`, `/transactions` 200), cron endpoint 401
   without/wrong token.
-- **Not verified here:** a live Vercel deployment, a live remote Turso
-  database, and the live Arc RPC (the sandbox blocks/slows it, so indexer
-  syncs fail gracefully there and the API still serves the last indexed
-  state). Run Step 4 against the real deploy to confirm those.
+- **Not verified here:** a live remote Turso database and the live Arc RPC
+  (the sandbox blocks/slows it, so indexer syncs fail gracefully there and
+  the API still serves the last indexed state). A live Vercel deployment
+  itself is verified since 2026-11-16 (deploy 7 from GitHub main, API
+  smoke-test `/api/health` 200, `/api/me` 200, cron 401 without token,
+  `/api/transactions` 401 unauthenticated). Run Step 4 against the real
+  deploy to confirm the Turso-backed login flow.
+
+## Deploy từ GitHub (từ 2026-11-16)
+
+- Repo: `manhtd2/sure2p` (Public), nhánh `main` đã nối với project Vercel
+  `sure2p` (Settings → Git → Connected Git Repository). Push lên `main`
+  sẽ tự trigger production deploy; không cần deploy bằng CLI nữa.
+- Deploy bằng CLI (`vercel deploy --prod`) vẫn hoạt động nhưng chỉ dùng
+  khi cần deploy gấp ngoài luồng Git.
