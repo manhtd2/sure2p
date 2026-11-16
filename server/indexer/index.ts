@@ -19,7 +19,7 @@ import { env } from '../env.js'
 import { applyEvent, rebuildProjections } from './project.js'
 import { escrowAbi } from '../../src/shared/escrowAbi.js'
 
-const CHUNK = 2000
+const CHUNK = 1000
 const REORG_REWIND = 25
 const POLL_MS = 3000
 const RECONCILE_EVERY_MS = 30_000
@@ -179,10 +179,12 @@ export async function reconcile(): Promise<void> {
 }
 
 /**
- * One bounded sync pass. `maxChunks` caps the 2000-block ranges this call
+ * One bounded sync pass. `maxChunks` caps the 1000-block ranges this call
  * may index (default: env.indexerSyncMaxChunks) so a single serverless
  * invocation never runs unbounded; the next lazy pass or cron run continues
- * from the durable cursor.
+ * from the durable cursor. 1000 blocks is the largest range the Arc
+ * testnet RPCs accept for a topics-filtered eth_getLogs: 2000 blocks
+ * fails with JSON-RPC -32012 "requested range too large" (2026-11-16).
  */
 async function tickOnce(maxChunks: number): Promise<void> {
   const startBlock = await resolveStartBlock()
