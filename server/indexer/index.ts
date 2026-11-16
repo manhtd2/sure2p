@@ -119,28 +119,31 @@ async function indexRange(from: number, to: number): Promise<void> {
   // fail over 50000 blocks — while 5 topics work over 10000 blocks and
   // 1-3 topics work over 1000 blocks (verified 2026-11-16). So the events
   // are queried in groups of 5, each call carrying a subset ABI so viem
-  // builds a 5-topic filter and decodes only those events; the groups
-  // run sequentially to stay under the public gateway's rate limit
-  // (parallel per-event calls tripped "Request exceeds defined limit").
-  // Results are merged back into chain order below.
+  // builds a 5-topic filter and decodes only those events. Results are
+  // merged back into chain order below.
   const events = escrowAbi.filter(
     (e): e is Extract<typeof escrowAbi[number], { type: 'event' }> => e.type === 'event',
   )
-  const perGroup: Awaited<ReturnType<typeof publicClient.getContractEvents>>[] = []
-  for (let i = 0; i < events.length; i += 5) {
-    const group = events.slice(i, i + 5)
-    const groupAbi = escrowAbi.filter(
-      (e) => e.type !== 'event' || group.some((g) => g.name === (e as { name?: string }).name),
-    )
-    perGroup.push(
-      await publicClient.getContractEvents({
+  // The 3 group calls run in parallel: a chunk must stay fast enough
+  // that a lazy pass (max 3 chunks) finishes inside the 8s request
+  // window — sequential calls from Vercel take ~2s each, so a sequential
+  // chunk alone would outlive the response and risk being frozen
+  // mid-transaction. 3 concurrent calls stay well under the public
+  // gateway's rate limit (unlike the earlier 15-way burst).
+  const perGroup = await Promise.all(
+    Array.from({ length: Math.ceil(events.length / 5) }, (_, gi) => {
+      const group = events.slice(gi * 5, gi * 5 + 5)
+      const groupAbi = escrowAbi.filter(
+        (e) => e.type !== 'event' || group.some((g) => g.name === (e as { name?: string }).name),
+      )
+      return publicClient.getContractEvents({
         address: env.escrow,
         abi: groupAbi,
         fromBlock: BigInt(from),
         toBlock: BigInt(to),
-      }),
-    )
-  }
+      })
+    }),
+  )
   const logs = perGroup
     .flat()
     .sort((a, b) => Number((a.blockNumber ?? 0n) - (b.blockNumber ?? 0n)) || Number((a.logIndex ?? 0) - (b.logIndex ?? 0)))
