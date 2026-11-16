@@ -1,7 +1,7 @@
 /**
  * Vercel Cron endpoint: GET /api/cron/indexer
  *
- * Runs one bounded indexer pass (up to INDEXER_SYNC_MAX_CHUNKS 2000-block
+ * Runs one bounded indexer pass (up to INDEXER_SYNC_MAX_CHUNKS 10000-block
  * ranges, default 10) plus a balance reconciliation, under the same durable
  * lock as lazy request-triggered sync, so cron and API reads never duplicate
  * work. See vercel.json for the schedule.

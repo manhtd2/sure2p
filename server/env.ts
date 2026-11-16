@@ -113,12 +113,22 @@ export const env = {
   explorerBase,
   rpc: resolveRpcUrl(),
   confirmations: Number(process.env.INDEXER_CONFIRMATIONS ?? 1),
-  /** Max 2000-block chunks one lazy/cron indexer pass may sync. Bounds serverless work per invocation. */
+  /** Max 10000-block chunks one lazy/cron indexer pass may sync. Bounds serverless work per invocation. */
   indexerSyncMaxChunks: Number(process.env.INDEXER_SYNC_MAX_CHUNKS ?? 10),
   /** Minimum gap between lazy (request-triggered) indexer passes, in ms. */
   indexerLazyMinIntervalMs: Number(process.env.INDEXER_LAZY_MIN_INTERVAL_MS ?? 15_000),
   /** Max time an API request waits for a lazy indexer pass before serving the last indexed state, in ms. */
   indexerLazyTimeoutMs: Number(process.env.INDEXER_LAZY_TIMEOUT_MS ?? 8_000),
+  /**
+   * Max chunks a lazy (request-triggered) pass may sync. Kept small (3)
+   * so the pass normally finishes inside indexerLazyTimeoutMs: a lazy
+   * pass that outlives the response risks being frozen mid-transaction
+   * when Vercel suspends the container, which corrupts the libSQL
+   * transaction stream ("interactive transaction was rolled back because
+   * the stream was closed", seen 2026-11-16). The cron endpoint has a
+   * 60s budget and keeps using indexerSyncMaxChunks.
+   */
+  indexerLazyMaxChunks: Number(process.env.INDEXER_LAZY_MAX_CHUNKS ?? 3),
   /** Optional shared secret for the /api/cron/indexer endpoint. When set, the cron caller must send it as a Bearer token. */
   cronSecret: process.env.CRON_SECRET ?? undefined,
   escrow: requiredAddress('VITE_SURE2P_ESCROW_ADDRESS'),

@@ -304,7 +304,10 @@ export async function maybeSyncIndexer(): Promise<boolean> {
   if (inFlight) return Promise.race([inFlight, sleep(env.indexerLazyTimeoutMs).then(() => false)])
   if (Date.now() - lastLazyAttempt < env.indexerLazyMinIntervalMs) return false
   lastLazyAttempt = Date.now()
-  inFlight = runIndexerOnce().catch(() => false)
+  // Lazy passes are capped to a few chunks so they finish inside the
+  // request wait window instead of being frozen mid-transaction (see
+  // env.indexerLazyMaxChunks); the cron endpoint runs the larger pass.
+  inFlight = runIndexerOnce(env.indexerLazyMaxChunks).catch(() => false)
   const current = inFlight
   void current.finally(() => {
     if (inFlight === current) inFlight = null

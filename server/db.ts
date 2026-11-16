@@ -237,27 +237,35 @@ CREATE TABLE IF NOT EXISTS audit_log (
 
 async function createLibSqlDriver(): Promise<Driver> {
   const { createClient } = await import('@libsql/client')
-  const client = createClient({ url: env.tursoUrl!, authToken: env.tursoAuthToken, intMode: 'number' })
+  // A fresh client per call: @libsql/client caches prepared-statement
+  // handles ("stored sql") in the client, but the server-side handles do
+  // not survive a frozen-then-thawed serverless container, so a shared
+  // client fails later invocations with "stored sql reference is invalid"
+  // (seen 2026-11-16: the first indexer pass worked, every later pass
+  // failed). createClient itself does no I/O, so per-call clients are
+  // cheap; each transaction still shares one client for its lifetime.
+  const newClient = () => createClient({ url: env.tursoUrl!, authToken: env.tursoAuthToken, intMode: 'number' })
   const base = {
     async get<T>(sql: string, params: SqlParams): Promise<T | null> {
-      const r = await client.execute({ sql, args: params })
+      const r = await newClient().execute({ sql, args: params })
       return (r.rows[0] as unknown as T) ?? null
     },
     async all<T>(sql: string, params: SqlParams): Promise<T[]> {
-      const r = await client.execute({ sql, args: params })
+      const r = await newClient().execute({ sql, args: params })
       return r.rows as unknown as T[]
     },
     async run(sql: string, params: SqlParams): Promise<RunResult> {
-      const r = await client.execute({ sql, args: params })
+      const r = await newClient().execute({ sql, args: params })
       return { changes: r.rowsAffected, lastInsertRowid: r.lastInsertRowid }
     },
     async exec(sql: string): Promise<void> {
-      await client.executeMultiple(sql)
+      await newClient().executeMultiple(sql)
     },
   }
   return {
     ...base,
     async tx<T>(fn: () => Promise<T>): Promise<T> {
+      const client = newClient()
       const tx = await client.transaction('write')
       const ctx: TxContext = {
         async get<U>(sql: string, params: SqlParams): Promise<U | null> {
