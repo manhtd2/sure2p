@@ -113,12 +113,33 @@ async function detectReorg(cursor: number): Promise<number> {
 }
 
 async function indexRange(from: number, to: number): Promise<void> {
-  const logs = await publicClient.getContractEvents({
-    address: env.escrow,
-    abi: escrowAbi,
-    fromBlock: BigInt(from),
-    toBlock: BigInt(to),
-  })
+  // The Arc testnet RPCs reject a topics-filtered eth_getLogs with many
+  // topic0 alternatives: one call with all 15 escrow events fails with
+  // -32012 "requested range too large" even over 10 blocks, while 1-3
+  // topics work over 1000 blocks (verified 2026-11-16). Query one event
+  // at a time (single topic0 each), in small parallel batches, and merge
+  // the results back into chain order.
+  const events = escrowAbi.filter(
+    (e): e is Extract<typeof escrowAbi[number], { type: 'event' }> => e.type === 'event',
+  )
+  const perEvent: Awaited<ReturnType<typeof publicClient.getContractEvents>>[] = []
+  for (let i = 0; i < events.length; i += 5) {
+    const batch = await Promise.all(
+      events.slice(i, i + 5).map((event) =>
+        publicClient.getContractEvents({
+          address: env.escrow,
+          abi: escrowAbi,
+          eventName: event.name,
+          fromBlock: BigInt(from),
+          toBlock: BigInt(to),
+        }),
+      ),
+    )
+    perEvent.push(...batch)
+  }
+  const logs = perEvent
+    .flat()
+    .sort((a, b) => Number((a.blockNumber ?? 0n) - (b.blockNumber ?? 0n)) || Number((a.logIndex ?? 0) - (b.logIndex ?? 0)))
   const timestamps = new Map<bigint, number>()
   const hashes = new Map<bigint, string>()
   for (const log of logs) {
@@ -183,8 +204,10 @@ export async function reconcile(): Promise<void> {
  * may index (default: env.indexerSyncMaxChunks) so a single serverless
  * invocation never runs unbounded; the next lazy pass or cron run continues
  * from the durable cursor. 1000 blocks is the largest range the Arc
- * testnet RPCs accept for a topics-filtered eth_getLogs: 2000 blocks
- * fails with JSON-RPC -32012 "requested range too large" (2026-11-16).
+ * testnet RPCs accept for a topics-filtered eth_getLogs (2000 blocks fails
+ * with JSON-RPC -32012 "requested range too large"), and the events are
+ * queried one at a time because a single call with all 15 topic0 values
+ * fails even over 10 blocks (verified 2026-11-16, see indexRange).
  */
 async function tickOnce(maxChunks: number): Promise<void> {
   const startBlock = await resolveStartBlock()
