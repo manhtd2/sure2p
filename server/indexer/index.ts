@@ -245,7 +245,11 @@ export async function runIndexerOnce(maxChunks: number = env.indexerSyncMaxChunk
     await tickOnce(maxChunks)
     return true
   } catch (err) {
-    status.lastError = err instanceof Error ? err.message.split('\n')[0].slice(0, 200) : 'indexer error'
+    // Keep the full first lines of the error: viem puts the JSON-RPC code
+    // and message (e.g. -32012 "requested range too large") after the
+    // generic first line, and that detail is what diagnoses RPC failures.
+    const full = err instanceof Error ? err.message : 'indexer error'
+    status.lastError = full.replace(/\s+/g, ' ').slice(0, 300)
     console.error('[indexer] sync pass failed:', status.lastError)
     throw err
   } finally {
