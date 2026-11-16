@@ -136,6 +136,7 @@ step prominently.
 | Symptom | Likely cause / fix |
 |---|---|
 | `500` on `/api/*`, logs mention the database | `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` wrong or missing. Check Vercel env vars and redeploy (env changes need a redeploy). |
+| Nested `/api/*` (e.g. `/api/auth/otp/request`) returns Vercel's plain-text `NOT_FOUND` while `/api/health` works | Catch-all `api/[...path].ts` is a Next.js-only feature: on a Vite static deploy it only matches single-segment paths. Fix (2026-11-16): the shared handler lives in `server/vercelHandler.ts` and every nested route has its own thin file under `api/` (`api/auth/otp/[action].ts`, `api/transactions/[publicId]/[action].ts`, ...). If you add a new nested API route, add its file too — do not rely on the catch-all. |
 | `vite: command not found` during build | Do **not** set `NODE_ENV=production` as a project env var: Vercel already sets it for production deployments, and a user-set value makes `npm install` skip devDependencies (vite is a devDependency). Fixed 2026-11-16 by removing the variable; the server still sees `NODE_ENV=production` at runtime. |
 | Server refuses to start, "mock OTP" error | `NODE_ENV=production` without a real provider: either set `DEMO_ALLOW_MOCK_OTP=true` (demo only) or add a real SMS provider. |
 | `/health` shows `lastError` from the indexer | The public RPC is rate-limiting or unreachable. Set `RPC_URL_Arc_Testnet` to your own RPC. The API still serves the last indexed state. |
