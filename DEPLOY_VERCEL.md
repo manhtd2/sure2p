@@ -67,7 +67,7 @@ dev values and never paste a real secret into chat or docs.
 | `TURSO_AUTH_TOKEN` | token from Step 1 | From Step 1 |
 | `DEMO_ALLOW_MOCK_OTP` | `true` | **Demo only** — see warning below |
 | `CRON_SECRET` | a long random string, generated | Bearer token for the indexer cron |
-| `RPC_URL_Arc_Testnet` | (optional) your own Arc RPC URL | Without it the public RPC is used and may rate-limit |
+| `RPC_URL_Arc_Testnet` | (optional) your own Arc RPC URL | Without it the public RPC is used and may rate-limit. Set 2026-11-16 to the QuickNode testnet gateway (`https://rpc.quicknode.testnet.arc.io`, no key needed, listed on docs.arc.io) after the public endpoint kept failing the indexer from Vercel. If it rate-limits too, use a dedicated endpoint with a key (e.g. Alchemy free tier) instead. |
 | `APP_ORIGIN` | (optional) your domain, e.g. `https://sure2p.vercel.app` | Extra allowed browser origin |
 
 ### ⚠️ Demo mock OTP warning

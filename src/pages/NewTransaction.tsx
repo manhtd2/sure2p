@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { ShoppingBag, Store } from 'lucide-react'
+import { ShoppingBag, Store, Wallet } from 'lucide-react'
 import { useLang } from '@/i18n'
 import { api, errorText } from '@/lib/api'
 import { useSession } from '@/hooks/useSession'
@@ -12,11 +12,12 @@ export default function NewTransaction() {
   const { tr } = useLang()
   const navigate = useNavigate()
   const qc = useQueryClient()
-  const { me } = useSession()
+  const { me, hasWallet } = useSession()
   const [role, setRole] = useState<'buyer' | 'seller'>('seller')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const restricted = me?.accountStatus !== undefined && me.accountStatus !== 'active'
+  const needsWallet = Boolean(me?.authenticated) && !hasWallet
 
   async function submit(terms: DealTerms) {
     setBusy(true)
@@ -48,6 +49,15 @@ export default function NewTransaction() {
       {restricted && (
         <p className="rounded-xl bg-[#fde8ec] p-3 text-sm text-[var(--danger)]" role="alert">
           {tr('Tài khoản này không thể tạo giao dịch mới.', 'This account cannot create new transactions.')}
+        </p>
+      )}
+      {needsWallet && (
+        <p className="flex flex-wrap items-center gap-2 rounded-xl border border-[#ecd49a] bg-[#fff4d6] p-3 text-sm text-[var(--warn)]" role="alert">
+          <Wallet className="size-4 shrink-0" />
+          <span>{tr('Bạn chưa liên kết ví. Tạo giao dịch cần ví đã ký chứng minh quyền sở hữu trên Arc Testnet.', 'You have not linked a wallet yet. Creating a transaction needs a wallet that signed proof of ownership on Arc Testnet.')}</span>
+          <Link className="font-semibold underline" to="/signin?next=/transactions/new">
+            {tr('Liên kết ví ngay', 'Link a wallet now')}
+          </Link>
         </p>
       )}
       <div className="card space-y-5 p-5">
