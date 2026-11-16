@@ -19,7 +19,7 @@ import { env } from '../env.js'
 import { applyEvent, rebuildProjections } from './project.js'
 import { escrowAbi } from '../../src/shared/escrowAbi.js'
 
-const CHUNK = 1000
+const CHUNK = 10000
 const REORG_REWIND = 25
 const POLL_MS = 3000
 const RECONCILE_EVERY_MS = 30_000
@@ -113,31 +113,35 @@ async function detectReorg(cursor: number): Promise<number> {
 }
 
 async function indexRange(from: number, to: number): Promise<void> {
-  // The Arc testnet RPCs reject a topics-filtered eth_getLogs with many
-  // topic0 alternatives: one call with all 15 escrow events fails with
-  // -32012 "requested range too large" even over 10 blocks, while 1-3
-  // topics work over 1000 blocks (verified 2026-11-16). Query one event
-  // at a time (single topic0 each), in small parallel batches, and merge
-  // the results back into chain order.
+  // The Arc testnet RPCs cap topics-filtered eth_getLogs by both range
+  // and topic count: one call with all 15 escrow events fails with
+  // -32012 "requested range too large" even over 10 blocks, and 3 topics
+  // fail over 50000 blocks — while 5 topics work over 10000 blocks and
+  // 1-3 topics work over 1000 blocks (verified 2026-11-16). So the events
+  // are queried in groups of 5, each call carrying a subset ABI so viem
+  // builds a 5-topic filter and decodes only those events; the groups
+  // run sequentially to stay under the public gateway's rate limit
+  // (parallel per-event calls tripped "Request exceeds defined limit").
+  // Results are merged back into chain order below.
   const events = escrowAbi.filter(
     (e): e is Extract<typeof escrowAbi[number], { type: 'event' }> => e.type === 'event',
   )
-  const perEvent: Awaited<ReturnType<typeof publicClient.getContractEvents>>[] = []
+  const perGroup: Awaited<ReturnType<typeof publicClient.getContractEvents>>[] = []
   for (let i = 0; i < events.length; i += 5) {
-    const batch = await Promise.all(
-      events.slice(i, i + 5).map((event) =>
-        publicClient.getContractEvents({
-          address: env.escrow,
-          abi: escrowAbi,
-          eventName: event.name,
-          fromBlock: BigInt(from),
-          toBlock: BigInt(to),
-        }),
-      ),
+    const group = events.slice(i, i + 5)
+    const groupAbi = escrowAbi.filter(
+      (e) => e.type !== 'event' || group.some((g) => g.name === (e as { name?: string }).name),
     )
-    perEvent.push(...batch)
+    perGroup.push(
+      await publicClient.getContractEvents({
+        address: env.escrow,
+        abi: groupAbi,
+        fromBlock: BigInt(from),
+        toBlock: BigInt(to),
+      }),
+    )
   }
-  const logs = perEvent
+  const logs = perGroup
     .flat()
     .sort((a, b) => Number((a.blockNumber ?? 0n) - (b.blockNumber ?? 0n)) || Number((a.logIndex ?? 0) - (b.logIndex ?? 0)))
   const timestamps = new Map<bigint, number>()
@@ -200,14 +204,13 @@ export async function reconcile(): Promise<void> {
 }
 
 /**
- * One bounded sync pass. `maxChunks` caps the 1000-block ranges this call
+ * One bounded sync pass. `maxChunks` caps the 10000-block ranges this call
  * may index (default: env.indexerSyncMaxChunks) so a single serverless
  * invocation never runs unbounded; the next lazy pass or cron run continues
- * from the durable cursor. 1000 blocks is the largest range the Arc
- * testnet RPCs accept for a topics-filtered eth_getLogs (2000 blocks fails
- * with JSON-RPC -32012 "requested range too large"), and the events are
- * queried one at a time because a single call with all 15 topic0 values
- * fails even over 10 blocks (verified 2026-11-16, see indexRange).
+ * from the durable cursor. 10000 blocks is the largest range the Arc
+ * testnet RPCs accept for a 5-topic eth_getLogs (a 15-topic filter fails
+ * even over 10 blocks, and 3 topics fail over 50000 blocks — see
+ * indexRange, verified 2026-11-16).
  */
 async function tickOnce(maxChunks: number): Promise<void> {
   const startBlock = await resolveStartBlock()
