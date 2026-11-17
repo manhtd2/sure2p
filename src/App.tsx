@@ -8,6 +8,7 @@ import Transactions from '@/pages/Transactions'
 import NewTransaction from '@/pages/NewTransaction'
 import Join from '@/pages/Join'
 import TransactionDetail from '@/pages/TransactionDetail'
+import Admin from '@/pages/Admin'
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
             <Route path="transactions" element={<RequireAuth><Transactions /></RequireAuth>} />
             <Route path="transactions/new" element={<RequireAuth><NewTransaction /></RequireAuth>} />
             <Route path="transactions/:ref" element={<RequireAuth><TransactionDetail /></RequireAuth>} />
+            <Route path="admin" element={<RequireAuth><Admin /></RequireAuth>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

@@ -75,8 +75,45 @@ export interface EscrowView {
   settlementNonce: number
   settledBuyerRefund: string | null
   creationTx: string
+  ruling: RulingView | null
   terms: DealTerms | null
   title?: string | null
+}
+
+export interface RulingDecisionView {
+  by: string
+  buyerPriceRefund: string
+  fault: 0 | 1 | 2
+  penalty: string
+  reasonHash: string
+}
+
+export interface RulingView {
+  notes: Record<string, string>
+  prelim: (RulingDecisionView & { at: number; appealDeadline: number }) | null
+  appeal: { by: string; at: number; reasonHash: string } | null
+  final: (RulingDecisionView & { at: number; byAppeal: boolean }) | null
+}
+
+export interface EvidenceFile {
+  id: string
+  filename: string
+  mime: string
+  size: number
+  sha256: string
+  note: string | null
+  uploadedBy: 'buyer' | 'seller'
+  createdAt: number
+  anchored: { txHash: string; at: number } | null
+}
+
+export interface AdminCase extends Omit<EscrowView, 'myRole'> {
+  myRole: 'admin'
+  role: 'arbiter' | 'reviewer'
+  /** True when the signed-in admin wallet is a party of this deal; the contract rejects its ruling. */
+  isParty: boolean
+  evidence: EvidenceFile[]
+  history: HistoryEvent[]
 }
 
 export interface DraftListItem {

@@ -1,4 +1,4 @@
-// Generated from contracts/out/Sure2PEscrow.sol. Do not edit by hand.
+// Generated from contracts/out/Sure2PEscrowV2.sol. Do not edit by hand.
 export const escrowAbi = [
   {
     "type": "constructor",
@@ -12,6 +12,26 @@ export const escrowAbi = [
         "name": "registry_",
         "type": "address",
         "internalType": "contract ISure2PAccountRegistry"
+      },
+      {
+        "name": "penaltyWallet_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "owner_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "arbiter_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "appealReviewer_",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "nonpayable"
@@ -25,6 +45,19 @@ export const escrowAbi = [
         "name": "",
         "type": "bytes32",
         "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "APPEAL_WINDOW",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -83,6 +116,13 @@ export const escrowAbi = [
   },
   {
     "type": "function",
+    "name": "acceptOwnership",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "acknowledgeReceipt",
     "inputs": [
       {
@@ -93,6 +133,87 @@ export const escrowAbi = [
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "anchorEvidence",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "evidenceHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "appeal",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "reasonHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "appealOpen",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "appealReviewer",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "arbiter",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -151,7 +272,7 @@ export const escrowAbi = [
       {
         "name": "a",
         "type": "tuple",
-        "internalType": "struct Sure2PEscrow.Agreement",
+        "internalType": "struct Sure2PEscrowV2.Agreement",
         "components": [
           {
             "name": "buyer",
@@ -382,7 +503,7 @@ export const escrowAbi = [
       {
         "name": "s",
         "type": "tuple",
-        "internalType": "struct Sure2PEscrow.Settlement",
+        "internalType": "struct Sure2PEscrowV2.Settlement",
         "components": [
           {
             "name": "escrowId",
@@ -453,6 +574,19 @@ export const escrowAbi = [
   },
   {
     "type": "function",
+    "name": "finalizeRuling",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "flagOverdue",
     "inputs": [
       {
@@ -504,7 +638,7 @@ export const escrowAbi = [
       {
         "name": "",
         "type": "tuple",
-        "internalType": "struct Sure2PEscrow.Escrow",
+        "internalType": "struct Sure2PEscrowV2.Escrow",
         "components": [
           {
             "name": "buyer",
@@ -619,7 +753,7 @@ export const escrowAbi = [
           {
             "name": "state",
             "type": "uint8",
-            "internalType": "enum Sure2PEscrow.State"
+            "internalType": "enum Sure2PEscrowV2.State"
           },
           {
             "name": "disputeOpenedBy",
@@ -643,12 +777,88 @@ export const escrowAbi = [
   },
   {
     "type": "function",
+    "name": "getRuling",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct Sure2PEscrowV2.Ruling",
+        "components": [
+          {
+            "name": "issuedBy",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "issuedAt",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "appealDeadline",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "buyerPriceRefund",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "penalty",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "fault",
+            "type": "uint8",
+            "internalType": "enum Sure2PEscrowV2.Fault"
+          },
+          {
+            "name": "reasonHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "appealed",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "appealedBy",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "appealedAt",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "appealReasonHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "hashAgreement",
     "inputs": [
       {
         "name": "a",
         "type": "tuple",
-        "internalType": "struct Sure2PEscrow.Agreement",
+        "internalType": "struct Sure2PEscrowV2.Agreement",
         "components": [
           {
             "name": "buyer",
@@ -734,7 +944,7 @@ export const escrowAbi = [
       {
         "name": "s",
         "type": "tuple",
-        "internalType": "struct Sure2PEscrow.Settlement",
+        "internalType": "struct Sure2PEscrowV2.Settlement",
         "components": [
           {
             "name": "escrowId",
@@ -775,6 +985,72 @@ export const escrowAbi = [
   },
   {
     "type": "function",
+    "name": "issueFinalRuling",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "buyerPriceRefund",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "fault",
+        "type": "uint8",
+        "internalType": "enum Sure2PEscrowV2.Fault"
+      },
+      {
+        "name": "penalty",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "reasonHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "issuePreliminaryRuling",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "buyerPriceRefund",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "fault",
+        "type": "uint8",
+        "internalType": "enum Sure2PEscrowV2.Fault"
+      },
+      {
+        "name": "penalty",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "reasonHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "openDispute",
     "inputs": [
       {
@@ -812,6 +1088,45 @@ export const escrowAbi = [
   },
   {
     "type": "function",
+    "name": "owner",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "penaltyWallet",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "pendingOwner",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "registry",
     "inputs": [],
     "outputs": [
@@ -825,6 +1140,39 @@ export const escrowAbi = [
   },
   {
     "type": "function",
+    "name": "renounceOwnership",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setAppealReviewer",
+    "inputs": [
+      {
+        "name": "newReviewer",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setArbiter",
+    "inputs": [
+      {
+        "name": "newArbiter",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "totalOutstanding",
     "inputs": [],
     "outputs": [
@@ -835,6 +1183,19 @@ export const escrowAbi = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "transferOwnership",
+    "inputs": [
+      {
+        "name": "newOwner",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -891,6 +1252,44 @@ export const escrowAbi = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "AppealReviewerChanged",
+    "inputs": [
+      {
+        "name": "oldReviewer",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "newReviewer",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ArbiterChanged",
+    "inputs": [
+      {
+        "name": "oldArbiter",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "newArbiter",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
   },
   {
     "type": "event",
@@ -1124,6 +1523,80 @@ export const escrowAbi = [
   },
   {
     "type": "event",
+    "name": "EvidenceAnchored",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "by",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "evidenceHash",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "at",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "FinalRulingIssued",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "issuedBy",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "buyerPriceRefund",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "fault",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "enum Sure2PEscrowV2.Fault"
+      },
+      {
+        "name": "penalty",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "reasonHash",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "HandoverDeclared",
     "inputs": [
       {
@@ -1206,6 +1679,93 @@ export const escrowAbi = [
   },
   {
     "type": "event",
+    "name": "OwnershipTransferStarted",
+    "inputs": [
+      {
+        "name": "previousOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "newOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "OwnershipTransferred",
+    "inputs": [
+      {
+        "name": "previousOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "newOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "PreliminaryRulingIssued",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "issuedBy",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "buyerPriceRefund",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "fault",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "enum Sure2PEscrowV2.Fault"
+      },
+      {
+        "name": "penalty",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "reasonHash",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "appealDeadline",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "ReceiptAcknowledged",
     "inputs": [
       {
@@ -1219,6 +1779,50 @@ export const escrowAbi = [
         "type": "uint64",
         "indexed": false,
         "internalType": "uint64"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RulingAppealed",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "by",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "reasonHash",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RulingFinalized",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "byAppeal",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
       }
     ],
     "anonymous": false
@@ -1269,6 +1873,11 @@ export const escrowAbi = [
   },
   {
     "type": "error",
+    "name": "AlreadyAppealed",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "AlreadyDeclared",
     "inputs": []
   },
@@ -1280,7 +1889,18 @@ export const escrowAbi = [
   {
     "type": "error",
     "name": "ConservationViolation",
-    "inputs": []
+    "inputs": [
+      {
+        "name": "expectedTotal",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "proposedTotal",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   },
   {
     "type": "error",
@@ -1339,6 +1959,11 @@ export const escrowAbi = [
   },
   {
     "type": "error",
+    "name": "InvalidRuling",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidSettlement",
     "inputs": []
   },
@@ -1365,7 +1990,7 @@ export const escrowAbi = [
       {
         "name": "actual",
         "type": "uint8",
-        "internalType": "enum Sure2PEscrow.State"
+        "internalType": "enum Sure2PEscrowV2.State"
       }
     ]
   },
@@ -1382,6 +2007,33 @@ export const escrowAbi = [
   {
     "type": "error",
     "name": "NotOverdue",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "OwnableInvalidOwner",
+    "inputs": [
+      {
+        "name": "owner",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "OwnableUnauthorizedAccount",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "OwnershipRenunciationDisabled",
     "inputs": []
   },
   {
@@ -1435,7 +2087,23 @@ export const escrowAbi = [
   {
     "type": "error",
     "name": "UnexpectedTransferAmount",
-    "inputs": []
+    "inputs": [
+      {
+        "name": "expected",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "balanceBefore",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "balanceAfter",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   },
   {
     "type": "error",

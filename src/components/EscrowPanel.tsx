@@ -12,7 +12,9 @@ import { ClaimPanel } from './ClaimPanel'
 import { EscrowActions } from './EscrowActions'
 import { HistoryList } from './HistoryList'
 import { Loader } from './Loader'
+import { EvidencePanel } from './EvidencePanel'
 import { ProgressTimeline } from './ProgressTimeline'
+import { RulingPanel } from './RulingPanel'
 import { SettlementPanel } from './SettlementPanel'
 import { StageLabel } from './StageChip'
 
@@ -56,10 +58,14 @@ export function EscrowPanel({ publicId }: { publicId: string }) {
     : state === CHAIN_STATE.Active ? 'active'
     : state === CHAIN_STATE.Overdue ? 'overdue'
     : state === CHAIN_STATE.Disputed ? 'disputed'
+    : state === CHAIN_STATE.PreliminaryRuling ? 'preliminary_ruling'
+    : state === CHAIN_STATE.Appealed ? 'appealed'
     : state === CHAIN_STATE.ExpiredUnfunded ? 'expired_unfunded'
-    : v.stage === 'settled' ? 'settled' : 'completed'
+    : v.stage === 'settled' ? 'settled' : v.stage === 'ruled' ? 'ruled' : 'completed'
   const locked = state === CHAIN_STATE.Overdue || state === CHAIN_STATE.Disputed
-  const settleable = state === CHAIN_STATE.Active || locked
+  const underRuling = state === CHAIN_STATE.PreliminaryRuling || state === CHAIN_STATE.Appealed
+  const settleable = state === CHAIN_STATE.Active || locked || underRuling
+  const caseOpen = locked || underRuling
   const terminal = state === CHAIN_STATE.Finalized || state === CHAIN_STATE.ExpiredUnfunded
 
   return (
@@ -88,7 +94,11 @@ export function EscrowPanel({ publicId }: { publicId: string }) {
             <ProgressTimeline priceUnits={price} activatedAt={Number(c.activatedAt)} handoverDeadline={Number(c.handoverDeadline)} locked={locked} lockedLabel={state === CHAIN_STATE.Disputed ? tr('Tranh chấp', 'Disputed') : tr('Quá hạn', 'Overdue')} />
           )}
           {walletOk && wallet && !terminal && <EscrowActions view={v} chain={c} wallet={wallet} onChanged={refresh} />}
+          {walletOk && (caseOpen || (terminal && v.ruling)) && <RulingPanel view={v} state={state} onChanged={refresh} />}
           {walletOk && settleable && <SettlementPanel view={v} onChanged={refresh} />}
+          {walletOk && (caseOpen || (terminal && v.ruling)) && (
+            <EvidencePanel publicId={v.publicId} onChainId={v.onChainId} canUpload={caseOpen} canAnchor={caseOpen} />
+          )}
           {walletOk && wallet && terminal && <ClaimPanel view={v} wallet={wallet} events={events} onChanged={refresh} />}
           <section className="card space-y-3 p-5">
             <h2 className="display text-lg font-semibold">{tr('Lịch sử trên chuỗi', 'Onchain history')}</h2>

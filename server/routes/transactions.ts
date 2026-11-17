@@ -6,6 +6,7 @@ import { indexerStatus, publicClient } from '../indexer/index.js'
 import { escrowAbi } from '../../src/shared/escrowAbi.js'
 import { isPublicId, overdueTriggerAt, type EscrowStage } from '../../src/shared/protocol.js'
 import { parseTerms, type DraftRow, type VersionRow } from '../lib/deals.js'
+import { historyFor, rulingFor } from '../lib/rulings.js'
 import { pendingTxSchema } from '../../src/shared/validation.js'
 
 export interface EscrowRow {
@@ -62,7 +63,7 @@ async function titleFor(agreementHash: string): Promise<string | null> {
   return v ? parseTerms(v.terms_json).title : null
 }
 
-async function escrowView(row: EscrowRow, role: 'buyer' | 'seller') {
+export async function escrowView(row: EscrowRow, role: 'buyer' | 'seller' | 'admin') {
   const trigger = overdueTriggerAt(nowSec(), {
     handoverDeadline: row.handover_deadline,
     buyerResponseSeconds: row.buyer_response_seconds,
@@ -112,6 +113,7 @@ async function escrowView(row: EscrowRow, role: 'buyer' | 'seller') {
     settlementNonce: row.settlement_nonce,
     settledBuyerRefund: row.settled_buyer_refund,
     creationTx: row.creation_tx,
+    ruling: await rulingFor(row.on_chain_id),
     terms: v ? parseTerms(v.terms_json) : null,
   }
 }
@@ -178,30 +180,7 @@ route('GET', '/transactions/:publicId', async (ctx) => {
 
 route('GET', '/transactions/:publicId/history', async (ctx) => {
   const { row } = await memberEscrow(ctx, ctx.params.publicId)
-  const events = await dbAll<{
-    name: string
-    block_number: number
-    block_timestamp: number
-    tx_hash: string
-    log_index: number
-    args_json: string
-  }>(
-    `SELECT name, block_number, block_timestamp, tx_hash, log_index, args_json FROM chain_events
-     WHERE chain_id = ? AND contract = ? AND on_chain_id = ? ORDER BY block_number, log_index`,
-    env.chainId,
-    env.escrow,
-    row.on_chain_id,
-  )
-  return {
-    events: events.map((e) => ({
-      name: e.name,
-      blockNumber: e.block_number,
-      timestamp: e.block_timestamp,
-      txHash: e.tx_hash,
-      logIndex: e.log_index,
-      args: JSON.parse(e.args_json),
-    })),
-  }
+  return { events: await historyFor(row.on_chain_id) }
 })
 
 /** Chain-derived amounts, labeled with the block they were read at. */

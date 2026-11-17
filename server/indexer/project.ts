@@ -7,6 +7,7 @@ import { env } from '../env.js'
 import { generatePublicId } from '../lib/crypto.js'
 
 export interface StoredEvent {
+  contract: string
   name: string
   blockNumber: number
   blockTimestamp: number
@@ -27,8 +28,9 @@ async function newPublicId(): Promise<string> {
 }
 
 export async function applyEvent(ev: StoredEvent): Promise<void> {
-  const id = ev.args.escrowId
-  const key = [env.chainId, env.escrow, id] as const
+  // Ruling-era events name the escrow `id`; the original events name it `escrowId`.
+  const id = ev.args.escrowId ?? ev.args.id
+  const key = [env.chainId, ev.contract, id] as const
   switch (ev.name) {
     case 'EscrowCreated': {
       const existing = await dbGet<{ public_id: string }>(
@@ -51,7 +53,7 @@ export async function applyEvent(ev: StoredEvent): Promise<void> {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         await newPublicId(),
         env.chainId,
-        env.escrow,
+        ev.contract,
         id,
         ev.args.buyer,
         ev.args.seller,
@@ -113,8 +115,64 @@ export async function applyEvent(ev: StoredEvent): Promise<void> {
         Number(ev.args.nonce) + 1,
       )
       return
+    case 'PreliminaryRulingIssued':
+      await dbRun(
+        `INSERT INTO rulings (chain_id, contract, on_chain_id, prelim_by, prelim_at, appeal_deadline, prelim_refund,
+           prelim_fault, prelim_penalty, prelim_reason)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(chain_id, contract, on_chain_id) DO UPDATE SET prelim_by = excluded.prelim_by,
+           prelim_at = excluded.prelim_at, appeal_deadline = excluded.appeal_deadline, prelim_refund = excluded.prelim_refund,
+           prelim_fault = excluded.prelim_fault, prelim_penalty = excluded.prelim_penalty, prelim_reason = excluded.prelim_reason`,
+        ...key,
+        ev.args.issuedBy,
+        ev.blockTimestamp,
+        Number(ev.args.appealDeadline),
+        ev.args.buyerPriceRefund,
+        Number(ev.args.fault),
+        ev.args.penalty,
+        ev.args.reasonHash,
+      )
+      await update(key, "stage = 'preliminary_ruling'")
+      return
+    case 'RulingAppealed':
+      await dbRun(
+        `UPDATE rulings SET appealed_by = ?, appealed_at = ?, appeal_reason = ? WHERE chain_id = ? AND contract = ? AND on_chain_id = ?`,
+        ev.args.by,
+        ev.blockTimestamp,
+        ev.args.reasonHash,
+        ...key,
+      )
+      await update(key, "stage = 'appealed'")
+      return
+    case 'FinalRulingIssued':
+      await dbRun(
+        `UPDATE rulings SET final_by = ?, final_refund = ?, final_fault = ?, final_penalty = ?, final_reason = ?
+         WHERE chain_id = ? AND contract = ? AND on_chain_id = ?`,
+        ev.args.issuedBy,
+        ev.args.buyerPriceRefund,
+        Number(ev.args.fault),
+        ev.args.penalty,
+        ev.args.reasonHash,
+        ...key,
+      )
+      return
+    case 'RulingFinalized': {
+      const byAppeal = ev.args.byAppeal === 'true' ? 1 : 0
+      await dbRun(
+        `UPDATE rulings SET finalized_at = ?, finalized_by_appeal = ?,
+           final_by = COALESCE(final_by, prelim_by), final_refund = COALESCE(final_refund, prelim_refund),
+           final_fault = COALESCE(final_fault, prelim_fault), final_penalty = COALESCE(final_penalty, prelim_penalty),
+           final_reason = COALESCE(final_reason, prelim_reason)
+         WHERE chain_id = ? AND contract = ? AND on_chain_id = ?`,
+        ev.blockTimestamp,
+        byAppeal,
+        ...key,
+      )
+      await update(key, "stage = 'ruled'")
+      return
+    }
     default:
-      return // CreditAssigned and Claimed are history-only.
+      return // CreditAssigned, Claimed and EvidenceAnchored are history-only.
   }
 }
 
@@ -125,16 +183,18 @@ async function update(key: readonly [number, string, string], set: string, ...va
 /** Reset all projected state, then replay every stored event in chain order. */
 export async function rebuildProjections(): Promise<void> {
   await dbTx(async () => {
+    await dbRun('DELETE FROM rulings')
     await dbRun(
       `UPDATE escrows SET orphaned = 1, stage = 'funding', buyer_funded = 0, seller_funded = 0, activated_at = NULL,
          seller_declared_at = NULL, handover_manifest = NULL, buyer_acknowledged_at = NULL, buyer_accepted_at = NULL,
          overdue_trigger = 0, dispute_opened_by = NULL, settlement_nonce = 0, settled_buyer_refund = NULL`,
     )
-    const rows = await dbAll<{ name: string; block_number: number; block_timestamp: number; tx_hash: string; args_json: string }>(
-      'SELECT name, block_number, block_timestamp, tx_hash, args_json FROM chain_events ORDER BY block_number, log_index',
+    const rows = await dbAll<{ contract: string; name: string; block_number: number; block_timestamp: number; tx_hash: string; args_json: string }>(
+      'SELECT contract, name, block_number, block_timestamp, tx_hash, args_json FROM chain_events ORDER BY block_number, log_index',
     )
     for (const r of rows) {
       await applyEvent({
+        contract: r.contract,
         name: r.name,
         blockNumber: r.block_number,
         blockTimestamp: r.block_timestamp,

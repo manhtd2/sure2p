@@ -11,10 +11,12 @@ Built with [Arc Studio](https://studio.arc.io)
 - Fund the escrow: the buyer locks 100% of the price plus a 25% deposit, the seller locks a separate 25% deposit. The deal starts only when both are fully funded.
 - See a time-progress bar for the deal. It is informational only and does not move money.
 - Confirm handover and receipt, then claim your funds to your own wallet. The seller receives the full price even when the deal finishes early, and both deposits are returned.
-- If a deal goes overdue or is disputed, funds are locked. In this release the way out is a mutual settlement that both sides sign, with a price split you choose and both deposits returned.
+- If a deal goes overdue or is disputed, funds are locked. The way out is a mutual settlement that both sides sign, or a ruling by an Arbiter who splits the price and can penalize the at-fault side by up to 100% of its own deposit. Either side can appeal once within 72 hours to a different reviewer.
+- Upload evidence (images, PDF, text) for an open case. Only the two sides and the Arbiter and Appeal Reviewer can open it, and you can anchor a file's hash onchain.
+- Arbiter and Appeal Reviewer use the admin console at `/admin`. It appears only for the wallet that holds the role onchain.
 - Switch the interface between Vietnamese and English.
 
-Not included yet: Admin rulings, the appeal window, deposit penalties, evidence uploads and the AI assistant.
+Not included yet: notifications and the AI assistant.
 
 ## Tech stack
 

@@ -95,7 +95,7 @@ export default function Landing() {
           <h2 className="display text-base font-semibold text-[var(--ink)]">{tr('Giới hạn cần biết trước khi ký', 'Limits to know before you sign')}</h2>
           <ul className="mt-2 list-disc space-y-1 pl-5">
             <li>{tr('Không có khoản nào tự động được giải phóng khi hết giờ hoặc khi một bên im lặng: quá hạn hoặc tranh chấp sẽ khóa tiền.', 'Nothing is released automatically when a deadline passes or someone is silent: overdue or disputed deals lock the funds.')}</li>
-            <li>{tr('Phiên bản này chưa có Admin phân xử. Tiền bị khóa chỉ thoát bằng thỏa thuận chung do cả hai bên ký.', 'This release has no Admin adjudication yet. Locked funds exit only through a mutual settlement signed by both sides.')}</li>
+            <li>{tr('Tiền bị khóa thoát bằng thỏa thuận chung của hai bên, hoặc bằng phán quyết của Arbiter với một lần kháng cáo trong 72 giờ. Bên có lỗi có thể bị phạt tối đa 100% khoản cọc của chính mình.', 'Locked funds exit through a mutual settlement of both sides, or an Arbiter ruling with one 72-hour appeal. The at-fault side can be penalized up to 100% of its own deposit.')}</li>
             <li>{tr('sure2p không giao hoặc xác minh hàng hóa, và OTP điện thoại không chứng minh một người duy nhất.', 'sure2p does not deliver or verify goods, and a phone OTP does not prove a unique person.')}</li>
             <li>{tr('Phí gas trả bằng USDC. Mất khóa ví nghĩa là mất quyền nhận tiền.', 'Gas is paid in USDC. Losing your wallet key means losing the right to claim.')}</li>
           </ul>

@@ -2,7 +2,7 @@ import { useReadContract } from 'wagmi'
 import { erc20Abi } from 'viem'
 import { CHAIN_ID, ESCROW_ADDRESS, USDC_ADDRESS, escrowAbi } from '@/lib/contracts'
 
-/** Contract enum order. PreliminaryRuling and Appealed are reserved for a later release. */
+/** Contract enum order (Sure2PEscrowV2). */
 export const CHAIN_STATE = {
   None: 0,
   Funding: 1,

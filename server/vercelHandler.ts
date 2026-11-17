@@ -23,6 +23,8 @@ import './routes/drafts.js'
 import './routes/invitations.js'
 import './routes/transactions.js'
 import './routes/settlements.js'
+import './routes/evidence.js'
+import './routes/admin.js'
 import { handle } from './http.js'
 
 export const config = {

@@ -73,7 +73,23 @@ function serializeArgs(args: Record<string, unknown>): Record<string, string> {
   return out
 }
 
+/**
+ * The indexer follows one escrow contract. When the configured address changes
+ * (a new contract version), drop the cursor so scanning restarts from the new
+ * contract's deployment block. Events already stored stay in chain_events and
+ * keep projecting onto the contract they came from.
+ */
+async function resetIfContractChanged(): Promise<void> {
+  const indexed = await getState('indexed_contract')
+  if (indexed === env.escrow) return
+  // No stored marker means the saved cursor predates versioning: it belongs to the first escrow contract.
+  console.warn(`[indexer] indexing escrow ${env.escrow} (previously ${indexed ?? 'the first contract'}), restarting from its deployment block`)
+  await dbRun("DELETE FROM indexer_state WHERE key IN ('start_block', 'cursor', 'cursor_hash')")
+  await setState('indexed_contract', env.escrow)
+}
+
 async function resolveStartBlock(): Promise<number> {
+  await resetIfContractChanged()
   const saved = await getState('start_block')
   if (saved) return Number(saved)
   let start: number | null = null
@@ -173,12 +189,13 @@ async function indexRange(from: number, to: number): Promise<void> {
         timestamps.get(log.blockNumber) ?? 0,
         env.escrow,
         String(log.eventName),
-        args.escrowId ?? null,
+        args.escrowId ?? args.id ?? null,
         JSON.stringify(args),
       )
       // Already-seen logs are skipped, so a replayed range never double-applies.
       if (inserted.changes === 1) {
         await applyEvent({
+          contract: env.escrow,
           name: String(log.eventName),
           blockNumber: Number(log.blockNumber),
           blockTimestamp: timestamps.get(log.blockNumber) ?? 0,

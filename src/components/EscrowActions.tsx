@@ -128,7 +128,7 @@ export function EscrowActions({ view, chain, wallet, onChanged }: Props) {
       <section className="card space-y-2 p-5">
         <h2 className="display flex items-center gap-2 text-lg font-semibold"><Lock className="size-4" /> {state === CHAIN_STATE.Disputed ? tr('Đang tranh chấp: tiền bị khóa', 'Disputed: funds locked') : tr('Quá hạn: tiền bị khóa', 'Overdue: funds locked')}</h2>
         <p className="text-sm text-[var(--ink-2)]">
-          {tr('Không ai rút được tiền. Phiên bản này chưa có Admin phân xử: lối thoát duy nhất là thỏa thuận chung do cả hai bên cùng ký ở bên dưới. Nếu hai bên không đồng ý, tiền vẫn bị khóa.', 'Nobody can withdraw. This release has no Admin adjudication: the only exit is the mutual settlement both parties sign below. If you cannot agree, funds stay locked.')}
+          {tr('Không ai rút được tiền. Có hai lối thoát: thỏa thuận chung do cả hai bên cùng ký, hoặc phán quyết của Arbiter (có một lần kháng cáo trong 72 giờ). Hãy gửi bằng chứng để Arbiter có căn cứ.', 'Nobody can withdraw. There are two ways out: a mutual settlement both parties sign, or a ruling by the Arbiter (with one 72-hour appeal). Add evidence so the Arbiter has something to rule on.')}
         </p>
       </section>
     )
@@ -202,7 +202,7 @@ export function EscrowActions({ view, chain, wallet, onChanged }: Props) {
         <details className="inner p-3">
           <summary className="cursor-pointer text-sm font-semibold">{tr('Có vấn đề? Mở tranh chấp', 'Problem? Open a dispute')}</summary>
           <div className="mt-3 space-y-2">
-            <p className="text-xs text-[var(--muted)]">{tr('Mở tranh chấp sẽ khóa toàn bộ tiền. Việc này không tự phạt ai. Ở bản này chỉ thỏa thuận chung mới giải phóng được tiền.', 'Opening a dispute locks all funds. It penalizes nobody by itself. In this release only a mutual settlement can release the funds.')}</p>
+            <p className="text-xs text-[var(--muted)]">{tr('Mở tranh chấp sẽ khóa toàn bộ tiền. Việc này không tự phạt ai. Tiền được giải phóng bằng thỏa thuận chung hoặc phán quyết của Arbiter, và Arbiter có thể phạt bên có lỗi tối đa 100% tiền cọc của bên đó.', 'Opening a dispute locks all funds. It penalizes nobody by itself. Funds are released by a mutual settlement or an Arbiter ruling, and the Arbiter may penalize the at-fault side up to 100% of that side\'s own deposit.')}</p>
             <input className="field" maxLength={200} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={tr('Lý do (chỉ hash được ghi lên chuỗi)', 'Reason (only its hash goes onchain)')} />
             <ChainAction
               label={tr('Mở tranh chấp và khóa tiền', 'Open dispute and lock funds')}

@@ -32,7 +32,7 @@ export interface Ctx {
   url: URL
   params: Record<string, string>
   session: Session | null
-  body<T>(schema: ZodType<T>): Promise<T>
+  body<T>(schema: ZodType<T>, maxBytes?: number): Promise<T>
   ip: string
   setCookies: string[]
 }
@@ -206,7 +206,10 @@ export async function handle(req: Request): Promise<Response> {
     // On Vercel there is no background indexer loop. Reads of indexed data
     // trigger a bounded, debounced sync pass first (no-op while the local
     // background loop is running, and never fatal if the chain is unreachable).
-    if (req.method === 'GET' && (url.pathname === '/health' || url.pathname.startsWith('/transactions'))) {
+    if (
+      req.method === 'GET' &&
+      (url.pathname === '/health' || url.pathname.startsWith('/transactions') || url.pathname.startsWith('/admin'))
+    ) {
       await maybeSyncIndexer().catch(() => undefined)
     }
 
@@ -222,11 +225,11 @@ export async function handle(req: Request): Promise<Response> {
       ip,
       session: await loadSession(req),
       setCookies: cookies,
-      async body<T>(schema: ZodType<T>): Promise<T> {
+      async body<T>(schema: ZodType<T>, maxBytes: number = MAX_BODY_BYTES): Promise<T> {
         const len = Number(req.headers.get('content-length') ?? 0)
-        if (len > MAX_BODY_BYTES) throw new HttpError(413, 'too_large', 'Body too large')
+        if (len > maxBytes) throw new HttpError(413, 'too_large', 'Body too large')
         const text = await req.text()
-        if (text.length > MAX_BODY_BYTES) throw new HttpError(413, 'too_large', 'Body too large')
+        if (text.length > maxBytes) throw new HttpError(413, 'too_large', 'Body too large')
         let json: unknown
         try {
           json = text ? JSON.parse(text) : {}
@@ -242,6 +245,14 @@ export async function handle(req: Request): Promise<Response> {
     }
     rateLimit(`ip:${ip}`, 600, 60)
     const result = await match.handler(ctx)
+    if (result instanceof Response) {
+      // Binary downloads (evidence files): the handler builds the full response.
+      const out = new Response(result.body, result)
+      out.headers.set('Cache-Control', 'private, no-store')
+      out.headers.set('X-Content-Type-Options', 'nosniff')
+      for (const c of cookies) out.headers.append('Set-Cookie', c)
+      return out
+    }
     return respond(result ?? { ok: true }, 200, cookies)
   } catch (err) {
     if (err instanceof HttpError) {

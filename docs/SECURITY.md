@@ -2,7 +2,7 @@
 
 ## Trust disclosure
 
-The escrow reduces payment and counterparty risk by locking funds in a contract. It does not prove that goods are genuine and it is not trustless dispute resolution. In this release a locked deal can only be released by both parties signing a settlement. Human Admin adjudication is planned and not active.
+The escrow reduces payment and counterparty risk by locking funds in a contract. It does not prove that goods are genuine and it is not trustless dispute resolution. A locked deal is released by both parties signing a settlement, or by a human Arbiter ruling (one 72 hour appeal to a different Appeal Reviewer). Rulings and penalties are human decisions and can be wrong.
 
 ## Controls in this build
 
@@ -20,7 +20,12 @@ The escrow reduces payment and counterparty risk by locking funds in a contract.
 
 - OTP is a mock in this build. A phone number does not prove a unique person.
 - A lost wallet key cannot be recovered.
-- A missing Admin cannot resolve disputes yet, so deadlock is possible when parties disagree.
+- There is no automatic release. If the Arbiter or Appeal Reviewer never acts, funds stay locked until the contract owner replaces them or the parties sign a settlement.
+- The Arbiter, Appeal Reviewer and owner are single wallets. Colluding role holders could misallocate funds of locked escrows. Use multisigs beyond testnet.
+- The owner and penalty wallet are the same address by choice. The owner cannot rule or move funds.
+- Evidence files are stored in the application database and are only as available as the server. Anchored hashes prove a file existed at that time, not that its contents are true.
+- Admin sign-in uses the same mock phone code as everyone else, then checks the wallet against the onchain roles. Replace the mock code before real use.
+- If the USDC issuer blocklists the escrow address, every claim fails. This is a property of the asset.
 - The registry roles belong to the platform deployer wallet and must be handed to an operator before real use.
 - No independent audit. No mainnet deployment is supported or intended.
 - Server rate limits are in memory and reset on restart.

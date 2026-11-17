@@ -30,8 +30,11 @@ Anyone may flag an overdue escrow. Completion is refused when any condition hold
 
 ## Release from a lock
 
-- This release: mutual settlement signed by both parties. The Buyer receives a price refund between 0 and the price plus their full deposit. The Seller receives the rest of the price plus their full deposit. No penalty.
-- Planned: Admin rulings with a single 72 hour appeal. Deposit penalties may reach up to 100% of the at-fault party's own deposit, with no fixed penalty matrix, and are not active yet.
+- Mutual settlement signed by both parties. The Buyer receives a price refund between 0 and the price plus their full deposit. The Seller receives the rest of the price plus their full deposit. No penalty. Available until the deal is finalized, including during a ruling or appeal.
+- Arbiter ruling (overdue or disputed deals): the Arbiter sets the Buyer's price refund (0 to the price), names the at-fault side (none, Buyer or Seller) and a penalty of at most 100% of that side's own deposit. The penalty is paid to a fixed penalty wallet. A written reason is required.
+- Appeal: within 72 hours of a preliminary ruling either party may appeal once. A different Appeal Reviewer issues the final ruling, which may keep, lower or raise the penalty and change the split. With no appeal, anyone may finalize the ruling after 72 hours.
+- Nothing is released automatically if the Arbiter or Appeal Reviewer stays silent. The contract owner can replace them.
+- Evidence: parties upload files (PNG, JPEG, WebP, PDF, text, up to 2 MB, 25 per deal) while a deal is overdue, disputed or under ruling. Only the parties and the onchain Arbiter and Appeal Reviewer can open them. A party may anchor a file's hash onchain.
 
 ## Accounts
 

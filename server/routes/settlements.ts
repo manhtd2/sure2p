@@ -30,7 +30,7 @@ interface ProposalRow {
   created_at: number
 }
 
-const SETTLEABLE = new Set(['active', 'overdue', 'disputed'])
+const SETTLEABLE = new Set(['active', 'overdue', 'disputed', 'preliminary_ruling', 'appealed'])
 
 function proposalView(p: ProposalRow, escrowId: string) {
   const settlement: SettlementJson = settlementToJson({

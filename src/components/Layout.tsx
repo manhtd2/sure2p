@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useDisconnect } from 'wagmi'
 import { LogOut, ShieldCheck } from 'lucide-react'
 import { useLang } from '@/i18n'
@@ -14,6 +14,14 @@ export function Layout() {
   const qc = useQueryClient()
   const navigate = useNavigate()
   const { disconnect } = useDisconnect()
+  // The console link only appears for the wallet that holds a ruling role onchain.
+  const adminRole = useQuery({
+    queryKey: ['admin-me', me?.wallet ?? null],
+    queryFn: () => api<{ role: 'arbiter' | 'reviewer' | null }>('/admin/me'),
+    enabled: signedIn && Boolean(me?.wallet),
+    staleTime: 30_000,
+    retry: false,
+  }).data?.role
 
   async function signOut() {
     try {
@@ -49,6 +57,11 @@ export function Layout() {
             <NavLink to="/join" className={link}>
               {tr('Tham gia', 'Join')}
             </NavLink>
+            {adminRole && (
+              <NavLink to="/admin" className={link}>
+                Admin
+              </NavLink>
+            )}
           </nav>
           <div className="flex items-center gap-2">
             <button
@@ -81,6 +94,11 @@ export function Layout() {
           <NavLink to="/join" className={link}>
             {tr('Tham gia', 'Join')}
           </NavLink>
+          {adminRole && (
+            <NavLink to="/admin" className={link}>
+              Admin
+            </NavLink>
+          )}
         </nav>
       </header>
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">

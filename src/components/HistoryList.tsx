@@ -18,6 +18,11 @@ const LABEL: Record<string, [string, string]> = {
   MutualCompletionFinalized: ['Hoàn tất, đã ghi có tiền', 'Completed, credits assigned'],
   DisputeOpened: ['Mở tranh chấp, tiền bị khóa', 'Dispute opened, funds locked'],
   MutualSettlementExecuted: ['Dàn xếp chung đã thực hiện', 'Mutual settlement executed'],
+  PreliminaryRulingIssued: ['Arbiter ra phán quyết sơ bộ', 'Arbiter issued a preliminary ruling'],
+  RulingAppealed: ['Một bên đã kháng cáo', 'A party appealed'],
+  FinalRulingIssued: ['Appeal Reviewer ra phán quyết cuối cùng', 'Appeal Reviewer issued the final ruling'],
+  RulingFinalized: ['Phán quyết đã chốt, đã ghi có tiền', 'Ruling finalized, credits assigned'],
+  EvidenceAnchored: ['Mã băm bằng chứng được ghi lên chuỗi', 'Evidence hash anchored onchain'],
   CreditAssigned: ['Ghi có có thể claim', 'Credit assigned (claimable)'],
   Claimed: ['Đã claim về ví', 'Claimed to wallet'],
 }
@@ -37,7 +42,9 @@ export function HistoryList({ events }: { events: HistoryEvent[] }) {
               ? `${tr('Hoàn giá cho Buyer', 'Buyer price refund')}: ${usdc(e.args.buyerPriceRefund)} USDC`
               : e.name === 'OverdueFlagged'
                 ? tr(`Điều kiện ${e.args.trigger}`, `Trigger ${e.args.trigger}`)
-                : null
+                : e.name === 'PreliminaryRulingIssued' || e.name === 'FinalRulingIssued'
+                  ? `${tr('Hoàn giá cho Buyer', 'Buyer price refund')}: ${usdc(e.args.buyerPriceRefund)} USDC · ${tr('phạt', 'penalty')}: ${usdc(e.args.penalty)} USDC`
+                  : null
         return (
           <li key={`${e.txHash}-${e.logIndex}`} className="flex items-start justify-between gap-3 text-sm">
             <div>

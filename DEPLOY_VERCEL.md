@@ -58,9 +58,9 @@ dev values and never paste a real secret into chat or docs.
 
 | Variable | Value | Notes |
 |---|---|---|
-| `VITE_SURE2P_ESCROW_ADDRESS` | `0xcdaf4bc89d9e44eac1c36d9ee01724e5e51d90b9` | Deployed escrow (Arc Testnet) |
+| `VITE_SURE2P_ESCROW_ADDRESS` | `0xbac54f5f54516007b5db955ee45433920893d94a` | Deployed escrow V2 (Arc Testnet) |
 | `VITE_ACCOUNT_REGISTRY_ADDRESS` | `0xfa6a19d4597a55f1f64003fb28fba199f8bafacd` | Deployed registry (Arc Testnet) |
-| `VITE_SURE2P_ESCROW_DEPLOY_TX` | `0x422002da4274996918369fd3758a929b0ff98607cadab927453fd78e6261bf11` | Where the indexer starts scanning |
+| `VITE_SURE2P_ESCROW_DEPLOY_TX` | `0x3da72eb58a398e576a02a4f8d6635998ee346c59b6c30ece9d15f49eaddccb08` | Where the indexer starts scanning (escrow V2 deployment) |
 | `SESSION_SECRET` | 64 hex chars, generated | Required in production |
 | `PHONE_ENCRYPTION_KEY` | 64 hex chars, generated | Required in production |
 | `TURSO_DATABASE_URL` | `libsql://sure2p-<id>.turso.io` | From Step 1 |
@@ -78,6 +78,8 @@ dev values and never paste a real secret into chat or docs.
 Use it only for a demo with test accounts. For any real users, remove the flag
 (default: the server refuses to start with mock OTP in production) and plug in
 a real SMS provider.
+
+Notes for the ruling release: evidence files (up to 2 MB, sent as base64) are stored in the Turso database, so no extra storage service is needed and the request stays under Vercel's 4.5 MB body limit. The admin console at `/admin` needs no extra setting: access follows the arbiter and appeal reviewer wallets stored in the contract.
 
 ## Step 3 — Import to Vercel and deploy
 

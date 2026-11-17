@@ -197,6 +197,56 @@ CREATE TABLE IF NOT EXISTS chain_events (
 CREATE INDEX IF NOT EXISTS idx_events_block ON chain_events(block_number);
 CREATE INDEX IF NOT EXISTS idx_events_escrow ON chain_events(on_chain_id);
 
+-- Ruling projection, rebuilt from chain events. One row per (contract, escrow).
+CREATE TABLE IF NOT EXISTS rulings (
+  chain_id INTEGER NOT NULL,
+  contract TEXT NOT NULL,
+  on_chain_id TEXT NOT NULL,
+  prelim_by TEXT,
+  prelim_at INTEGER,
+  appeal_deadline INTEGER,
+  prelim_refund TEXT,
+  prelim_fault INTEGER,
+  prelim_penalty TEXT,
+  prelim_reason TEXT,
+  appealed_by TEXT,
+  appealed_at INTEGER,
+  appeal_reason TEXT,
+  final_by TEXT,
+  final_refund TEXT,
+  final_fault INTEGER,
+  final_penalty TEXT,
+  final_reason TEXT,
+  finalized_at INTEGER,
+  finalized_by_appeal INTEGER,
+  PRIMARY KEY (chain_id, contract, on_chain_id)
+);
+
+-- Evidence files. Bytes live in the database so a serverless deploy needs no extra storage.
+CREATE TABLE IF NOT EXISTS evidence (
+  id TEXT PRIMARY KEY,
+  public_id TEXT NOT NULL REFERENCES escrows(public_id),
+  uploader_wallet TEXT NOT NULL,
+  uploader_account TEXT NOT NULL,
+  filename TEXT NOT NULL,
+  mime TEXT NOT NULL,
+  size INTEGER NOT NULL,
+  sha256 TEXT NOT NULL,
+  note TEXT,
+  content BLOB NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_evidence_public ON evidence(public_id, created_at);
+
+-- Plain-text reasons behind a hash that was sent onchain (ruling reasons, appeal reasons).
+CREATE TABLE IF NOT EXISTS case_notes (
+  hash TEXT PRIMARY KEY,
+  public_id TEXT NOT NULL REFERENCES escrows(public_id),
+  author_wallet TEXT NOT NULL,
+  text TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS indexer_state (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
