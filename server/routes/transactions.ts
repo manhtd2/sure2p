@@ -221,17 +221,30 @@ route('POST', '/transactions/:publicId/tx', async (ctx) => {
   return { ok: true }
 })
 
-route('GET', '/transactions/:publicId/tx/:txHash', async (ctx) => {
+async function txStatus(ctx: Ctx, txHash: string): Promise<{ status: string; blockNumber?: string }> {
   const { row } = await memberEscrow(ctx, ctx.params.publicId)
-  if (!/^0x[0-9a-fA-F]{64}$/.test(ctx.params.txHash)) throw notFound()
-  const known = await dbGet('SELECT 1 AS x FROM pending_txs WHERE tx_hash = ? AND public_id = ?', ctx.params.txHash, row.public_id)
+  if (!/^0x[0-9a-fA-F]{64}$/.test(txHash)) throw notFound()
+  const known = await dbGet('SELECT 1 AS x FROM pending_txs WHERE tx_hash = ? AND public_id = ?', txHash, row.public_id)
   if (!known) throw notFound()
   try {
-    const receipt = await publicClient.getTransactionReceipt({ hash: ctx.params.txHash as `0x${string}` })
+    const receipt = await publicClient.getTransactionReceipt({ hash: txHash as `0x${string}` })
     return { status: receipt.status === 'success' ? 'confirmed' : 'reverted', blockNumber: receipt.blockNumber.toString() }
   } catch {
     return { status: 'pending' }
   }
+}
+
+route('GET', '/transactions/:publicId/tx/:txHash', async (ctx) => txStatus(ctx, ctx.params.txHash))
+
+/**
+ * Flattened alias (2026-11-17): GET /transactions/:publicId/tx?txHash=<hash>.
+ * The old /tx/:txHash path still works on the local dev server;
+ * on Vercel it has no function file of its own, so the app calls this shape.
+ */
+route('GET', '/transactions/:publicId/tx', async (ctx) => {
+  const txHash = ctx.url.searchParams.get('txHash')
+  if (!txHash) throw notFound()
+  return txStatus(ctx, txHash)
 })
 
 route('GET', '/health', () => {

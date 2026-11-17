@@ -124,7 +124,7 @@ async function negotiateAndCreate(seller: Session, buyer: Session, priceUnits: b
   record('second claim of the same invitation is rejected (404)', true)
 
   // Buyer counters with a different handover deadline: a new immutable version.
-  await buyer.call('POST', `/drafts/${draftId}/counteroffer`, { terms: { ...terms, handoverDeadline: handoverDeadline + 3600 } })
+  await buyer.call('POST', `/drafts/${draftId}?action=counteroffer`, { terms: { ...terms, handoverDeadline: handoverDeadline + 3600 } })
   const draft = await seller.call<DraftView>('GET', `/drafts/${draftId}`)
   record('counteroffer produced version 2', draft.versions.length === 2)
   const latest = draft.versions[1]
@@ -137,7 +137,7 @@ async function negotiateAndCreate(seller: Session, buyer: Session, priceUnits: b
       primaryType: 'Agreement',
       message: agreement,
     })
-    await s.call('POST', `/drafts/${draftId}/sign`, { versionId: latest.id, signature, acknowledgedDisclosure: true })
+    await s.call('POST', `/drafts/${draftId}?action=sign`, { versionId: latest.id, signature, acknowledgedDisclosure: true })
   }
   const signed = await seller.call<DraftView>('GET', `/drafts/${draftId}`)
   const v = signed.versions[1]
@@ -151,7 +151,7 @@ async function negotiateAndCreate(seller: Session, buyer: Session, priceUnits: b
       args: [agreement, v.buyerSig as Hex, v.sellerSig as Hex],
     }),
   )
-  await seller.call('POST', `/drafts/${draftId}/submitted`, { txHash: hash })
+  await seller.call('POST', `/drafts/${draftId}?action=submitted`, { txHash: hash })
   const indexed = await waitFor('publicId', async () => {
     const d = await seller.call<DraftView>('GET', `/drafts/${draftId}`)
     return d.publicId

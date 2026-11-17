@@ -4,7 +4,7 @@
  */
 import { dbAll, dbGet, nowSec } from '../db.js'
 import { env } from '../env.js'
-import { notFound, requireSession, requireWallet, route } from '../http.js'
+import { notFound, requireSession, requireWallet, route, type Ctx } from '../http.js'
 import { chainRoles, adminRoleOf, historyFor, requireAdmin } from '../lib/rulings.js'
 import { parseTerms, type VersionRow } from '../lib/deals.js'
 import { OPEN_CASE_STAGES, isPublicId, overdueTriggerAt } from '../../src/shared/protocol.js'
@@ -105,7 +105,7 @@ route('GET', '/admin/cases/:publicId', async (ctx) => {
 })
 
 /** Stores the written reasoning behind a ruling and returns the hash the ruling transaction commits to. */
-route('POST', '/admin/cases/:publicId/notes', async (ctx) => {
+async function saveAdminNote(ctx: Ctx): Promise<{ hash: string }> {
   const { wallet } = await requireAdmin(ctx)
   const publicId = ctx.params.publicId
   if (!isPublicId(publicId)) throw notFound()
@@ -119,4 +119,16 @@ route('POST', '/admin/cases/:publicId/notes', async (ctx) => {
   rateLimit(`admin-notes:${wallet}`, 30, 600)
   const { text } = await ctx.body(z.object({ text: z.string().trim().min(10).max(2000) }))
   return saveNote(publicId, wallet, text)
+}
+
+route('POST', '/admin/cases/:publicId/notes', saveAdminNote)
+
+/**
+ * Flattened alias (2026-11-17): POST /admin/cases/:publicId?action=notes.
+ * The old /admin/cases/:publicId/notes path still works on the local dev server;
+ * on Vercel it has no function file of its own, so the app calls this shape.
+ */
+route('POST', '/admin/cases/:publicId', async (ctx) => {
+  if (ctx.url.searchParams.get('action') === 'notes') return saveAdminNote(ctx)
+  throw notFound()
 })

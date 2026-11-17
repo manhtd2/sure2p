@@ -87,6 +87,11 @@ export async function evidenceList(row: EscrowRow) {
 
 route('GET', '/transactions/:publicId/evidence', async (ctx) => {
   const { row } = await partyOrAdmin(ctx, ctx.params.publicId)
+  // Flattened alias (2026-11-17): ?evidenceId=<id> downloads one file.
+  // The old /evidence/:evidenceId path still works on the local dev server;
+  // on Vercel it has no function file of its own, so the app calls this shape.
+  const evidenceId = ctx.url.searchParams.get('evidenceId')
+  if (evidenceId) return downloadEvidence(ctx, row, evidenceId)
   return { files: await evidenceList(row), maxBytes: MAX_EVIDENCE_BYTES, mimeTypes: ALLOWED_MIME }
 })
 
@@ -126,11 +131,10 @@ route('POST', '/transactions/:publicId/evidence', async (ctx) => {
   return { id, sha256: `0x${sha256}`, duplicate: false }
 })
 
-route('GET', '/transactions/:publicId/evidence/:evidenceId', async (ctx) => {
-  const { row } = await partyOrAdmin(ctx, ctx.params.publicId)
+async function downloadEvidence(ctx: Ctx, row: EscrowRow, evidenceId: string): Promise<Response> {
   const file = await dbGet<EvidenceRow & { content: unknown }>(
     `SELECT ${META_COLUMNS}, content FROM evidence WHERE id = ? AND public_id = ?`,
-    ctx.params.evidenceId,
+    evidenceId,
     row.public_id,
   )
   if (!file) throw notFound()
@@ -144,6 +148,11 @@ route('GET', '/transactions/:publicId/evidence/:evidenceId', async (ctx) => {
       'Content-Security-Policy': "default-src 'none'; sandbox",
     },
   })
+}
+
+route('GET', '/transactions/:publicId/evidence/:evidenceId', async (ctx) => {
+  const { row } = await partyOrAdmin(ctx, ctx.params.publicId)
+  return downloadEvidence(ctx, row, ctx.params.evidenceId)
 })
 
 const noteSchema = z.object({ text: z.string().trim().min(3).max(2000) })

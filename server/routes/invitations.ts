@@ -76,14 +76,16 @@ route('POST', '/drafts/:id/invitations', async (ctx) => {
   return { invitationId: id, token, code, expiresAt: nowSec() + INVITE_TTL }
 })
 
-route('POST', '/invitations/:id/revoke', async (ctx) => {
+async function revokeInvitation(ctx: Ctx): Promise<{ ok: boolean }> {
   requireWallet(ctx)
   const accountId = ctx.session!.accountId
   const res = await dbRun('UPDATE invitations SET revoked = 1 WHERE id = ? AND created_by = ? AND claimed_by IS NULL', ctx.params.id, accountId)
   if (res.changes !== 1) throw notFound()
   await audit(accountId, 'invite.revoked', ctx.params.id)
   return { ok: true }
-})
+}
+
+route('POST', '/invitations/:id/revoke', revokeInvitation)
 
 /** Limited pre-claim metadata. Requires phone + wallet authentication. */
 route('POST', '/invitations/peek', async (ctx) => {
@@ -145,4 +147,15 @@ route('POST', '/invitations/claim', async (ctx) => {
   if (!result) throw notFound()
   await audit(s.accountId, 'invite.claimed', result, { invitationId: invite.id })
   return { draftId: result }
+})
+
+/**
+ * Flattened alias (2026-11-17): POST /invitations/:id?action=revoke.
+ * The old /invitations/:id/revoke path still works on the local dev server;
+ * on Vercel it has no function file of its own, so the app calls this shape.
+ * Registered last so /invitations/peek and /invitations/claim still match first.
+ */
+route('POST', '/invitations/:id', async (ctx) => {
+  if (ctx.url.searchParams.get('action') === 'revoke') return revokeInvitation(ctx)
+  throw notFound()
 })

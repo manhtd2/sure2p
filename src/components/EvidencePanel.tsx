@@ -116,7 +116,7 @@ export function EvidencePanel({ publicId, onChainId, canUpload, canAnchor }: Pro
           {files.map((f) => (
             <li key={f.id} className="inner space-y-2 p-3 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <a className="inline-flex items-center gap-1.5 font-semibold underline" href={`/api/transactions/${publicId}/evidence/${f.id}`} download={f.filename}>
+                <a className="inline-flex items-center gap-1.5 font-semibold underline" href={`/api/transactions/${publicId}/evidence?evidenceId=${f.id}`} download={f.filename}>
                   <FileText className="size-4" /> {f.filename}
                 </a>
                 <span className="chip">{f.uploadedBy === 'buyer' ? 'Buyer' : 'Seller'}</span>

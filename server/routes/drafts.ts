@@ -3,10 +3,12 @@ import { audit, dbGet, dbRun, nowSec } from '../db.js'
 import { env } from '../env.js'
 import {
   HttpError,
+  notFound,
   rateLimit,
   requireNewTradeEligible,
   requireWallet,
   route,
+  type Ctx,
 } from '../http.js'
 import { newDraftRef } from '../lib/crypto.js'
 import {
@@ -64,7 +66,7 @@ route('GET', '/drafts/:id', async (ctx) => {
   return draftView(draft, accountId)
 })
 
-route('POST', '/drafts/:id/counteroffer', async (ctx) => {
+async function counterofferDraft(ctx: Ctx): Promise<{ versionId: string; version: number }> {
   const s = requireWallet(ctx)
   requireNewTradeEligible(s)
   const { draft, accountId } = await memberDraft(ctx, ctx.params.id)
@@ -78,10 +80,12 @@ route('POST', '/drafts/:id/counteroffer', async (ctx) => {
   await touchDraft(draft.id, draft.counterparty_account ? 'negotiating' : draft.status)
   await audit(accountId, 'draft.counteroffer', draft.id, { version: version.version })
   return { versionId: version.id, version: version.version }
-})
+}
+
+route('POST', '/drafts/:id/counteroffer', counterofferDraft)
 
 /** Signing the typed agreement is the party's explicit acceptance of the exact version. */
-route('POST', '/drafts/:id/sign', async (ctx) => {
+async function signDraft(ctx: Ctx): Promise<{ signed: boolean; ready: boolean }> {
   const s = requireWallet(ctx)
   requireNewTradeEligible(s)
   const { draft, accountId } = await memberDraft(ctx, ctx.params.id)
@@ -131,9 +135,11 @@ route('POST', '/drafts/:id/sign', async (ctx) => {
   await touchDraft(draft.id, after!.buyer_sig && after!.seller_sig ? 'ready' : 'negotiating')
   await audit(accountId, 'agreement.signed', draft.id, { version: v.version, side, disclosureAcknowledged: true })
   return { signed: true, ready: Boolean(after!.buyer_sig && after!.seller_sig) }
-})
+}
 
-route('POST', '/drafts/:id/submitted', async (ctx) => {
+route('POST', '/drafts/:id/sign', signDraft)
+
+async function submitDraft(ctx: Ctx): Promise<{ ok: boolean }> {
   const s = requireWallet(ctx)
   const { draft, accountId } = await memberDraft(ctx, ctx.params.id)
   const { txHash } = await ctx.body(submittedTxSchema)
@@ -149,10 +155,12 @@ route('POST', '/drafts/:id/submitted', async (ctx) => {
   )
   await audit(accountId, 'escrow.create_submitted', draft.id, { txHash, wallet: s.wallet })
   return { ok: true }
-})
+}
+
+route('POST', '/drafts/:id/submitted', submitDraft)
 
 /** Allows a retry when createEscrow failed or the version expired before it was mined. */
-route('POST', '/drafts/:id/reopen', async (ctx) => {
+async function reopenDraft(ctx: Ctx): Promise<{ ok: boolean }> {
   requireWallet(ctx)
   const { draft, accountId } = await memberDraft(ctx, ctx.params.id)
   const created = await dbGet(
@@ -163,4 +171,20 @@ route('POST', '/drafts/:id/reopen', async (ctx) => {
   if (draft.status === 'submitted') await touchDraft(draft.id, 'ready')
   await audit(accountId, 'draft.reopened', draft.id)
   return { ok: true }
+}
+
+route('POST', '/drafts/:id/reopen', reopenDraft)
+
+/**
+ * Flattened alias (2026-11-17): POST /drafts/:id?action=counteroffer|sign|submitted|reopen.
+ * The old /drafts/:id/<action> paths still work on the local dev server;
+ * on Vercel they have no function file of their own, so the app calls this shape.
+ */
+route('POST', '/drafts/:id', async (ctx) => {
+  const action = ctx.url.searchParams.get('action')
+  if (action === 'counteroffer') return counterofferDraft(ctx)
+  if (action === 'sign') return signDraft(ctx)
+  if (action === 'submitted') return submitDraft(ctx)
+  if (action === 'reopen') return reopenDraft(ctx)
+  throw notFound()
 })

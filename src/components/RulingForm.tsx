@@ -87,7 +87,7 @@ export function RulingForm({ view, kind, onDone }: Props) {
         label={kind === 'prelim' ? tr('Ghi phán quyết sơ bộ lên chuỗi', 'Record preliminary ruling onchain') : tr('Ghi phán quyết cuối cùng lên chuỗi', 'Record final ruling onchain')}
         disabled={!valid}
         send={async () => {
-          const note = await api<{ hash: `0x${string}` }>(`/admin/cases/${view.publicId}/notes`, { body: { text: reason.trim() } })
+          const note = await api<{ hash: `0x${string}` }>(`/admin/cases/${view.publicId}?action=notes`, { body: { text: reason.trim() } })
           return writeContractAsync({
             address: ESCROW_ADDRESS,
             abi: escrowAbi,

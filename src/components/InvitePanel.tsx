@@ -42,7 +42,7 @@ export function InvitePanel({ draft }: { draft: DraftView }) {
     setBusy(true)
     setError(null)
     try {
-      await api(`/invitations/${inv.id}/revoke`, { body: {} })
+      await api(`/invitations/${inv.id}?action=revoke`, { body: {} })
       setIssued(null)
       await qc.invalidateQueries({ queryKey: ['draft', draft.id] })
     } catch (e) {

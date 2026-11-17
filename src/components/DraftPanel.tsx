@@ -62,7 +62,7 @@ export function DraftPanel({ draftId }: { draftId: string }) {
     setBusy(true)
     setActionError(null)
     try {
-      await api(`/drafts/${draftId}/counteroffer`, { body: { terms: next } })
+      await api(`/drafts/${draftId}?action=counteroffer`, { body: { terms: next } })
       setEditing(false)
       setAck(false)
       await qc.invalidateQueries({ queryKey: ['draft', draftId] })
@@ -84,7 +84,7 @@ export function DraftPanel({ draftId }: { draftId: string }) {
         primaryType: 'Agreement',
         message: agreementFromJson(latest.agreement),
       })
-      await api(`/drafts/${draftId}/sign`, { body: { versionId: latest.id, signature, acknowledgedDisclosure: true } })
+      await api(`/drafts/${draftId}?action=sign`, { body: { versionId: latest.id, signature, acknowledgedDisclosure: true } })
       await qc.invalidateQueries({ queryKey: ['draft', draftId] })
     } catch (e) {
       const parsed = parseTxError(e, tr)
@@ -105,7 +105,7 @@ export function DraftPanel({ draftId }: { draftId: string }) {
         await qc.invalidateQueries({ queryKey: ['draft', draftId] })
       },
       async (hash) => {
-        await api(`/drafts/${draftId}/submitted`, { body: { txHash: hash } })
+        await api(`/drafts/${draftId}?action=submitted`, { body: { txHash: hash } })
       },
     )
   }

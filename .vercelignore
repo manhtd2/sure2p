@@ -15,3 +15,13 @@ api/invitations/claim.ts
 api/invitations/peek.ts
 api/auth/\[action\].ts
 api/invitations/\[action\].ts
+# Flattened routes (2026-11-17): the app now calls the parent path with
+# ?action= / ?evidenceId= / ?txHash= instead of these nested paths
+# (see the "Flattened alias" routes in server/routes/*). These files stay
+# in git for history but must NOT be deployed, or the count goes back over
+# the 12-function Hobby limit (was 16, now 11).
+api/invitations/\[id\]/revoke.ts
+api/admin/cases/\[publicId\]/\[action\].ts
+api/transactions/\[publicId\]/evidence/\[evidenceId\].ts
+api/drafts/\[id\]/\[action\].ts
+api/transactions/\[publicId\]/tx/\[txHash\].ts
