@@ -11,5 +11,8 @@ node_modules/
 dist/
 .DS_Store
 contracts/cache/
+contracts/out/
+lib/
+*.jsonl
 .vercel
 .env*
