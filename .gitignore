@@ -12,7 +12,7 @@ dist/
 .DS_Store
 contracts/cache/
 contracts/out/
-lib/
+/lib/
 *.jsonl
 .vercel
 .env*
