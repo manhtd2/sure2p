@@ -1,9 +1,11 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { Loader2 } from 'lucide-react'
+import { FileUp, Loader2, X } from 'lucide-react'
 import { useLang } from '@/i18n'
 import { parseUsdc } from '@/onchain-money'
 import { dealTermsSchema, handoverDeadlineError } from '@/shared/validation'
-import { DEFAULT_INSPECTION_SECONDS, DEFAULT_RESPONSE_SECONDS, type DealTerms } from '@/shared/protocol'
+import { DEFAULT_INSPECTION_SECONDS, DEFAULT_RESPONSE_SECONDS, type AttachmentRef, type DealTerms } from '@/shared/protocol'
+import { ATTACHMENT_MAX_BYTES, ATTACHMENT_MAX_FILES, FILE_ACCEPT, mimeForFilename } from '@/shared/files'
+import { formatBytes, refForFile } from '@/lib/attachments'
 import { fromLocalInput, toLocalInput, usdc } from '@/lib/format'
 import { AmountBreakdown } from './AmountBreakdown'
 
@@ -11,8 +13,11 @@ interface Props {
   initial?: DealTerms
   submitLabel: string
   busy?: boolean
-  onSubmit: (terms: DealTerms) => void
+  /** `files` are new description files the caller must upload after saving. */
+  onSubmit: (terms: DealTerms, files: File[]) => void
   leading?: ReactNode
+  /** Only the Buyer may attach description files. Without it, existing attachments are kept as they are. */
+  canAttach?: boolean
 }
 
 function safeParseUsdc(value: string): bigint {
@@ -62,7 +67,7 @@ const FIELD_KEY: Record<string, string> = {
   inspectionSeconds: 'inspectH',
 }
 
-export function TermsForm({ initial, submitLabel, busy, onSubmit, leading }: Props) {
+export function TermsForm({ initial, submitLabel, busy, onSubmit, leading, canAttach = false }: Props) {
   const { tr } = useLang()
   const [title, setTitle] = useState(initial?.title ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
@@ -73,6 +78,9 @@ export function TermsForm({ initial, submitLabel, busy, onSubmit, leading }: Pro
   const [deadline, setDeadline] = useState(() => toLocalInput(initial?.handoverDeadline ?? Math.floor(Date.now() / 1000) + 7 * 86400))
   const [responseH, setResponseH] = useState(String((initial?.buyerResponseSeconds ?? DEFAULT_RESPONSE_SECONDS) / 3600))
   const [inspectH, setInspectH] = useState(String((initial?.inspectionSeconds ?? DEFAULT_INSPECTION_SECONDS) / 3600))
+  const [keptRefs, setKeptRefs] = useState<AttachmentRef[]>(initial?.attachments ?? [])
+  const [newFiles, setNewFiles] = useState<File[]>([])
+  const [fileError, setFileError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
@@ -88,11 +96,45 @@ export function TermsForm({ initial, submitLabel, busy, onSubmit, leading }: Pro
     })
   }
 
-  function submit(e: React.FormEvent) {
+  function addFiles(list: FileList | null) {
+    if (!list) return
+    setFileError(null)
+    const next = [...newFiles]
+    for (const f of Array.from(list)) {
+      if (!mimeForFilename(f.name)) {
+        setFileError(tr(`Không nhận định dạng của "${f.name}". Dùng Excel, Word, PDF, TXT, CSV hoặc ảnh.`, `"${f.name}" is not an accepted type. Use Excel, Word, PDF, TXT, CSV or an image.`))
+        continue
+      }
+      if (f.size === 0 || f.size > ATTACHMENT_MAX_BYTES) {
+        setFileError(tr(`"${f.name}" phải nhỏ hơn ${formatBytes(ATTACHMENT_MAX_BYTES)}.`, `"${f.name}" must be smaller than ${formatBytes(ATTACHMENT_MAX_BYTES)}.`))
+        continue
+      }
+      if (keptRefs.length + next.length >= ATTACHMENT_MAX_FILES) {
+        setFileError(tr(`Tối đa ${ATTACHMENT_MAX_FILES} file.`, `At most ${ATTACHMENT_MAX_FILES} files.`))
+        break
+      }
+      next.push(f)
+    }
+    setNewFiles(next)
+  }
+
+  async function submit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
     setFieldErrors({})
     const handoverDeadline = fromLocalInput(deadline)
+    // Hash the new files in the browser. The hashes go into the terms both sides sign.
+    const chosen = canAttach ? newFiles : []
+    const newRefs: AttachmentRef[] = []
+    for (const f of chosen) {
+      const ref = await refForFile(f)
+      if (ref) newRefs.push(ref)
+    }
+    const attachments = canAttach ? [...keptRefs, ...newRefs] : (initial?.attachments ?? [])
+    if (new Set(attachments.map((a) => a.sha256)).size !== attachments.length) {
+      setFileError(tr('Có file bị chọn trùng nhau.', 'The same file was selected twice.'))
+      return
+    }
     const candidate = {
       title,
       description,
@@ -103,6 +145,7 @@ export function TermsForm({ initial, submitLabel, busy, onSubmit, leading }: Pro
       handoverDeadline,
       buyerResponseSeconds: Math.round(Number(responseH) * 3600),
       inspectionSeconds: Math.round(Number(inspectH) * 3600),
+      ...(attachments.length > 0 ? { attachments } : {}),
     }
     const parsed = dealTermsSchema.safeParse(candidate)
     if (!parsed.success) {
@@ -121,14 +164,14 @@ export function TermsForm({ initial, submitLabel, busy, onSubmit, leading }: Pro
       setError(tr('Kiểm tra các trường tô đỏ bên dưới.', 'Check the highlighted fields below.'))
       return
     }
-    onSubmit(parsed.data)
+    onSubmit(parsed.data, chosen)
   }
 
   const err = (key: string) => fieldErrors[key]
   const fieldClass = (key: string) => `field ${err(key) ? '!border-[var(--danger)]' : ''}`
 
   return (
-    <form onSubmit={submit} className="space-y-4">
+    <form onSubmit={(e) => void submit(e)} className="space-y-4">
       {leading}
       <div>
         <label className="label" htmlFor="t-title">{tr('Tên hàng hóa hoặc dịch vụ', 'Goods or service title')}</label>
@@ -158,6 +201,37 @@ export function TermsForm({ initial, submitLabel, busy, onSubmit, leading }: Pro
         <textarea id="t-criteria" className={`${fieldClass('criteria')} min-h-20`} maxLength={1000} minLength={5} required value={criteria} onChange={(e) => { setCriteria(e.target.value); clearField('criteria') }} />
         {err('criteria') && <p className="mt-1 text-xs text-[var(--danger)]">{err('criteria')}</p>}
       </div>
+      {(canAttach || keptRefs.length > 0) && (
+        <div className="space-y-2">
+          <div className="label">{tr('Tài liệu mô tả hàng cần mua (tùy chọn)', 'Description files for the goods (optional)')}</div>
+          <p className="text-xs text-[var(--subtle)]">
+            {tr(`Excel, Word, PDF, TXT, CSV hoặc ảnh, tối đa ${ATTACHMENT_MAX_FILES} file, mỗi file dưới ${formatBytes(ATTACHMENT_MAX_BYTES)}. Sau khi hai bên ký và nạp tiền, các file này bị khóa làm bằng chứng đối chiếu khi có tranh chấp. Đừng đưa thông tin bí mật vào.`, `Excel, Word, PDF, TXT, CSV or images, up to ${ATTACHMENT_MAX_FILES} files under ${formatBytes(ATTACHMENT_MAX_BYTES)} each. Once both sides sign and fund, these files are locked as evidence for any dispute. Do not include secrets.`)}
+          </p>
+          <ul className="space-y-1.5">
+            {keptRefs.map((r) => (
+              <li key={r.sha256} className="inner flex items-center justify-between gap-2 p-2 text-sm">
+                <span className="truncate">{r.name} <span className="text-xs text-[var(--muted)]">{formatBytes(r.size)}</span></span>
+                {canAttach && (
+                  <button type="button" className="btn btn-ghost !min-h-8 !px-2" aria-label={tr('Bỏ file', 'Remove file')} onClick={() => setKeptRefs((prev) => prev.filter((x) => x.sha256 !== r.sha256))}><X className="size-3.5" /></button>
+                )}
+              </li>
+            ))}
+            {newFiles.map((f, i) => (
+              <li key={`${f.name}-${f.size}-${i}`} className="inner flex items-center justify-between gap-2 p-2 text-sm">
+                <span className="truncate">{f.name} <span className="text-xs text-[var(--muted)]">{formatBytes(f.size)}</span></span>
+                <button type="button" className="btn btn-ghost !min-h-8 !px-2" aria-label={tr('Bỏ file', 'Remove file')} onClick={() => setNewFiles((prev) => prev.filter((_, j) => j !== i))}><X className="size-3.5" /></button>
+              </li>
+            ))}
+          </ul>
+          {canAttach && (
+            <label className="btn btn-ghost w-full cursor-pointer">
+              <FileUp className="size-4" /> {tr('Chọn file', 'Choose files')}
+              <input type="file" className="sr-only" multiple accept={FILE_ACCEPT} onChange={(e) => { addFiles(e.target.files); e.target.value = '' }} />
+            </label>
+          )}
+          {fileError && <p className="text-xs text-[var(--danger)]" role="alert">{fileError}</p>}
+        </div>
+      )}
       <div className="inner p-4">
         <label className="label" htmlFor="t-price">{tr('Giá thỏa thuận (USDC)', 'Agreed price (USDC)')}</label>
         <input id="t-price" className={`${fieldClass('price')} display !text-2xl font-bold tabular-nums`} inputMode="decimal" required value={price} onChange={(e) => { const v = e.target.value.replace(/[^0-9.]/g, ''); if (/^\d*\.?\d{0,6}$/.test(v)) setPrice(v); clearField('price') }} placeholder="0.00" />

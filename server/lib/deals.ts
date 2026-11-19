@@ -1,6 +1,7 @@
 import { getAddress, type Address, type Hex } from 'viem'
 import { dbAll, dbGet, dbRun, nowSec } from '../db.js'
 import { env } from '../env.js'
+import { missingAttachments } from './attachments.js'
 import { HttpError, notFound, type Ctx } from '../http.js'
 import { newId, randomHex } from './crypto.js'
 import {
@@ -73,6 +74,8 @@ export function validateTerms(input: unknown): DealTerms {
   if (handoverDeadlineError(parsed.data.handoverDeadline, nowSec())) {
     throw new HttpError(400, 'handover_deadline_too_soon', 'Handover deadline must be at least 25 hours from now')
   }
+  // Never store an empty list: agreements without attachments must hash exactly as before.
+  if (parsed.data.attachments && parsed.data.attachments.length === 0) delete parsed.data.attachments
   return parsed.data
 }
 
@@ -177,8 +180,12 @@ export async function draftView(draft: DraftRow, accountId: string) {
       )
     : null
   const escrow = await escrowForDraft(draft)
+  const latest = versions[versions.length - 1]
+  const missing = latest ? await missingAttachments(draft.id, parseTerms(latest.terms_json)) : []
   return {
     id: draft.id,
+    /** Hashes of files the latest version references but whose bytes are not uploaded yet. Signing is blocked until empty. */
+    missingAttachments: missing.map((m) => m.sha256),
     status: escrow ? 'escrow_created' : draft.status,
     myRole: mine,
     creatorRole: draft.creator_role,

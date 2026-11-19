@@ -6,6 +6,7 @@ import { useLang } from '@/i18n'
 import { api, errorText } from '@/lib/api'
 import { CHAIN_ID, ESCROW_ADDRESS, escrowAbi } from '@/lib/contracts'
 import { formatDateTime } from '@/lib/format'
+import { FILE_ACCEPT, mimeForFilename } from '@/shared/files'
 import type { EvidenceFile } from '@/lib/types'
 import { ChainAction } from './ChainAction'
 
@@ -64,7 +65,7 @@ export function EvidencePanel({ publicId, onChainId, canUpload, canAnchor }: Pro
     setBusy(true)
     try {
       await api(`/transactions/${publicId}/evidence`, {
-        body: { filename: file.name, mime: file.type || 'text/plain', note: note.trim() || undefined, dataBase64: toBase64(await file.arrayBuffer()) },
+        body: { filename: file.name, mime: mimeForFilename(file.name) ?? 'text/plain', note: note.trim() || undefined, dataBase64: toBase64(await file.arrayBuffer()) },
       })
       setNote('')
       await qc.invalidateQueries({ queryKey: key })
@@ -96,7 +97,7 @@ export function EvidencePanel({ publicId, onChainId, canUpload, canAnchor }: Pro
           <input
             ref={input}
             type="file"
-            accept="image/png,image/jpeg,image/webp,application/pdf,text/plain"
+            accept={FILE_ACCEPT}
             disabled={busy}
             className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-[var(--surface-muted)] file:px-3 file:py-2 file:text-sm file:font-medium"
             onChange={(e) => {

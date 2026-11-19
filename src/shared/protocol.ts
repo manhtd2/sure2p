@@ -56,6 +56,15 @@ export function fundingBreakdown(priceUnits: bigint): FundingBreakdown {
 }
 
 /** Business terms that both parties sign. Wallet addresses are bound separately. */
+/** A file the Buyer attached to describe the goods. Its hash is part of the signed agreement, so it cannot change after signing. */
+export interface AttachmentRef {
+  name: string
+  mime: string
+  size: number
+  /** Lowercase hex sha256 of the file bytes, without 0x. */
+  sha256: string
+}
+
 export interface DealTerms {
   title: string
   description: string
@@ -68,6 +77,8 @@ export interface DealTerms {
   handoverDeadline: number
   buyerResponseSeconds: number
   inspectionSeconds: number
+  /** Buyer's description files. Omitted (never an empty list) when there are none, so older agreements hash the same. */
+  attachments?: AttachmentRef[]
 }
 
 export interface PartyWallets {

@@ -8,12 +8,15 @@ Built with [Arc Studio](https://studio.arc.io)
 
 - Sign in with a phone number and a wallet signature. In this build the phone code is a clearly labeled mock for development and testnet.
 - Create a deal as buyer or seller, then invite the other side with a link, a short code or a QR code. The other side can accept or counter, and both sign the same final version.
+- The Buyer can attach description files for the goods (Excel, Word, PDF, TXT, CSV or images, up to 5 files of 3 MB). After both sides sign, the files are locked, and once the escrow is created they stay as evidence the parties and the Arbiter can compare against the goods in a dispute.
+- Delete a draft you created if nobody has joined it yet (for example an invitation made by mistake).
 - Fund the escrow: the buyer locks 100% of the price plus a 25% deposit, the seller locks a separate 25% deposit. The deal starts only when both are fully funded.
 - See a time-progress bar for the deal. It is informational only and does not move money.
 - Confirm handover and receipt, then claim your funds to your own wallet. The seller receives the full price even when the deal finishes early, and both deposits are returned.
 - If a deal goes overdue or is disputed, funds are locked. The way out is a mutual settlement that both sides sign, or a ruling by an Arbiter who splits the price and can penalize the at-fault side by up to 100% of its own deposit. Either side can appeal once within 72 hours to a different reviewer.
 - Upload evidence (images, PDF, text) for an open case. Only the two sides and the Arbiter and Appeal Reviewer can open it, and you can anchor a file's hash onchain.
 - Arbiter and Appeal Reviewer use the admin console at `/admin`. It appears only for the wallet that holds the role onchain.
+- The penalty wallet signs in the same way and opens `/admin` to claim the penalties paid to it, one deal at a time.
 - Switch the interface between Vietnamese and English.
 
 Not included yet: notifications and the AI assistant.

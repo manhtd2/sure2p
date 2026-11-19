@@ -40,6 +40,8 @@ export interface DraftView {
   createdAt: number
   updatedAt: number
   invitation: { id: string; expiresAt: number; revoked: boolean; claimed: boolean; expired: boolean } | null
+  /** Hashes the latest version references whose bytes are not uploaded yet. */
+  missingAttachments: string[]
   versions: DraftVersionView[]
 }
 
@@ -124,6 +126,7 @@ export interface DraftListItem {
   price: string
   myRole: 'buyer' | 'seller'
   updatedAt: number
+  canDelete?: boolean
 }
 
 export type ListItem = DraftListItem | EscrowView

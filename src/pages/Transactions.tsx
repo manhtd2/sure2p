@@ -6,6 +6,7 @@ import { useLang } from '@/i18n'
 import { api, errorText } from '@/lib/api'
 import { formatDateTime, formatDuration, usdcWithCommas } from '@/lib/format'
 import type { ListItem } from '@/lib/types'
+import { DeleteDraftButton } from '@/components/DeleteDraftButton'
 import { StageChip } from '@/components/StageChip'
 import { useNow } from '@/hooks/useNow'
 
@@ -262,6 +263,11 @@ export default function Transactions() {
                   </div>
                 )}
               </Link>
+              {item.kind === 'draft' && item.canDelete && (
+                <div className="mt-2 px-1">
+                  <DeleteDraftButton draftId={item.ref} onDeleted={() => undefined} />
+                </div>
+              )}
             </li>
           )
         })}

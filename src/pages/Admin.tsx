@@ -6,6 +6,8 @@ import { ChainAction } from '@/components/ChainAction'
 import { DecisionSummary } from '@/components/RulingPanel'
 import { EvidencePanel } from '@/components/EvidencePanel'
 import { HistoryList } from '@/components/HistoryList'
+import { AttachmentList } from '@/components/AttachmentList'
+import { PenaltyPanel } from '@/components/PenaltyPanel'
 import { Loader } from '@/components/Loader'
 import { RulingForm } from '@/components/RulingForm'
 import { StageLabel } from '@/components/StageChip'
@@ -32,18 +34,29 @@ interface CaseItem {
 export default function Admin() {
   const { tr } = useLang()
   const [selected, setSelected] = useState<string | null>(null)
-  const me = useQuery({ queryKey: ['admin-me'], queryFn: () => api<{ role: 'arbiter' | 'reviewer' | null }>('/admin/me') })
+  const me = useQuery({ queryKey: ['admin-me'], queryFn: () => api<{ role: 'arbiter' | 'reviewer' | null; penaltyWallet: boolean }>('/admin/me') })
 
   if (me.isLoading) return <Loader />
   if (me.error) return <p className="card p-6 text-sm text-[var(--danger)]">{errorText(me.error, tr)}</p>
+  if (!me.data?.role && me.data?.penaltyWallet) {
+    return (
+      <div className="space-y-5">
+        <div>
+          <span className="chip">{tr('Ví penalty', 'Penalty wallet')}</span>
+          <h1 className="display mt-2 text-3xl font-bold">{tr('Nhận tiền phạt', 'Claim penalties')}</h1>
+        </div>
+        <PenaltyPanel />
+      </div>
+    )
+  }
   if (!me.data?.role) {
     return (
       <section className="card space-y-2 p-6">
         <h1 className="display text-2xl font-bold">{tr('Admin console', 'Admin console')}</h1>
         <p className="text-sm text-[var(--muted)]">
           {tr(
-            'Ví bạn đang đăng nhập không phải Arbiter hoặc Appeal Reviewer của hợp đồng. Hãy đăng nhập bằng đúng ví được giao vai trò.',
-            'The wallet you are signed in with is not the contract\'s Arbiter or Appeal Reviewer. Sign in with the wallet that holds the role.',
+            'Ví bạn đang đăng nhập không phải Arbiter, Appeal Reviewer hay ví penalty của hợp đồng. Hãy đăng nhập bằng đúng ví được giao vai trò.',
+            'The wallet you are signed in with is not the contract\'s Arbiter, Appeal Reviewer or penalty wallet. Sign in with the wallet that holds the role.',
           )}
         </p>
       </section>
@@ -200,6 +213,12 @@ function CaseDetail({ publicId, onBack }: { publicId: string; onBack: () => void
               <div className="label">{tr('Điều khoản đã ký', 'Signed terms')}</div>
               <p className="whitespace-pre-wrap break-words text-[var(--ink-2)]">{v.terms.description}</p>
               <p className="text-xs text-[var(--muted)]">{tr('Tiêu chí nghiệm thu', 'Acceptance criteria')}: {v.terms.acceptanceCriteria}</p>
+              {(v.terms.attachments?.length ?? 0) > 0 && (
+                <div className="space-y-2 pt-2">
+                  <div className="label">{tr('Tài liệu mô tả hàng của Buyer (đối chiếu với hàng thực nhận)', "Buyer's description files (compare with the goods received)")}</div>
+                  <AttachmentList files={v.terms.attachments!} href={(sha) => `/api/transactions/${v.publicId}/evidence?attachment=${sha}`} lock="evidence" />
+                </div>
+              )}
             </section>
           )}
         </aside>

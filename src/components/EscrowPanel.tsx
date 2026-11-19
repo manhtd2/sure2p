@@ -8,6 +8,7 @@ import { CHAIN_ID } from '@/lib/contracts'
 import { shortAddress, usdcWithCommas } from '@/lib/format'
 import type { EscrowView, HistoryEvent } from '@/lib/types'
 import { CHAIN_STATE, useEscrowChain } from '@/hooks/useEscrowChain'
+import { AttachmentList } from './AttachmentList'
 import { ClaimPanel } from './ClaimPanel'
 import { EscrowActions } from './EscrowActions'
 import { HistoryList } from './HistoryList'
@@ -130,6 +131,16 @@ export function EscrowPanel({ publicId }: { publicId: string }) {
               <div className="label">{tr('Điều khoản đã ký', 'Signed terms')}</div>
               <p className="whitespace-pre-wrap break-words text-[var(--ink-2)]">{v.terms.description}</p>
               <p className="text-xs text-[var(--muted)]">{tr('Tiêu chí nghiệm thu', 'Acceptance criteria')}: {v.terms.acceptanceCriteria}</p>
+              {(v.terms.attachments?.length ?? 0) > 0 && (
+                <div className="space-y-2 pt-2">
+                  <div className="label">{tr('Tài liệu mô tả hàng của Buyer', "Buyer's description files")}</div>
+                  <AttachmentList
+                    files={v.terms.attachments!}
+                    href={(sha) => `/api/transactions/${v.publicId}/evidence?attachment=${sha}`}
+                    lock={state === CHAIN_STATE.Funding ? 'signed' : 'evidence'}
+                  />
+                </div>
+              )}
             </section>
           )}
         </aside>

@@ -10,13 +10,20 @@
 
 ## Lifecycle
 
-1. Draft (offchain). Either side creates it and chooses a role. One invitation (link, code, QR).
+1. Draft (offchain). Either side creates it and chooses a role. One invitation (link, code, QR). The creator can delete a draft nobody has joined yet; the invitation stops working. Once a counterparty joins, the draft cannot be deleted.
 2. Negotiation. Accepting means signing the exact version. A counteroffer creates a new immutable version and old signatures stop applying.
 3. Escrow creation onchain with both signatures. A 24 hour funding window starts at confirmed creation.
 4. Funding. If someone does not fund in time, anyone can expire the escrow and every funded amount is credited back with no penalty.
 5. Active. The time bar is informational. Nothing is withdrawable before dual confirmation.
 6. Seller declares handover (a claim, not proof). Buyer acknowledges receipt (starts a 72 hour inspection by default) and accepts. Buyer may accept directly, which records the acknowledgement too.
 7. Completion credits the Seller with the full price plus their deposit and the Buyer with their deposit. Each side claims to its own wallet.
+
+## Description files
+
+- Only the Buyer attaches description files (Excel, Word, PDF, TXT, CSV or images; up to 5 files, 3 MB each). If the Seller creates the draft, the Buyer adds files in a counteroffer after joining.
+- Each file's sha256 is written into the agreement terms, so it is part of the agreement hash that both sides sign and that is recorded onchain when the escrow is created. After signing a file cannot be swapped; a change means a new version and new signatures.
+- Both sides must have every referenced file uploaded before the Seller can sign.
+- Once the escrow exists the files are shown as locked evidence to both parties and, in a dispute, to the Arbiter and Appeal Reviewer.
 
 ## Overdue and disputes
 

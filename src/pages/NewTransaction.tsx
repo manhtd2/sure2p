@@ -7,6 +7,7 @@ import { api, errorText } from '@/lib/api'
 import { useSession } from '@/hooks/useSession'
 import { TermsForm } from '@/components/TermsForm'
 import type { DealTerms } from '@/shared/protocol'
+import { uploadAttachment } from '@/lib/attachments'
 
 export default function NewTransaction() {
   const { tr } = useLang()
@@ -16,15 +17,30 @@ export default function NewTransaction() {
   const [role, setRole] = useState<'buyer' | 'seller'>('seller')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [createdId, setCreatedId] = useState<string | null>(null)
   const restricted = me?.accountStatus !== undefined && me.accountStatus !== 'active'
   const needsWallet = Boolean(me?.authenticated) && !hasWallet
 
-  async function submit(terms: DealTerms) {
+  async function submit(terms: DealTerms, files: File[]) {
     setBusy(true)
     setError(null)
     try {
       const { id } = await api<{ id: string }>('/drafts', { body: { role, terms } })
       await qc.invalidateQueries({ queryKey: ['transactions'] })
+      // The terms already carry each file's hash; now send the bytes. If one fails the draft page offers a retry.
+      const failed: string[] = []
+      for (const f of files) {
+        try {
+          await uploadAttachment(id, f)
+        } catch {
+          failed.push(f.name)
+        }
+      }
+      if (failed.length > 0) {
+        setCreatedId(id)
+        setError(tr(`Đã tạo bản nháp nhưng chưa tải lên được: ${failed.join(', ')}. Mở bản nháp để tải lại.`, `The draft was created but these files did not upload: ${failed.join(', ')}. Open the draft to upload them again.`))
+        return
+      }
       void navigate(`/transactions/${id}`)
     } catch (e) {
       setError(errorText(e, tr))
@@ -64,7 +80,8 @@ export default function NewTransaction() {
         <TermsForm
           submitLabel={tr('Tạo bản nháp và mời đối tác', 'Create draft and invite counterparty')}
           busy={busy || restricted}
-          onSubmit={(t) => void submit(t)}
+          canAttach={role === 'buyer'}
+          onSubmit={(t, files) => void submit(t, files)}
           leading={
             <fieldset>
               <legend className="label">{tr('Vai trò của bạn', 'Your role')}</legend>
@@ -83,7 +100,12 @@ export default function NewTransaction() {
             </fieldset>
           }
         />
-        {error && <p className="text-sm text-[var(--danger)]" role="alert">{error}</p>}
+        {error && (
+          <p className="text-sm text-[var(--danger)]" role="alert">
+            {error}{' '}
+            {createdId && <Link className="font-semibold underline" to={`/transactions/${createdId}`}>{tr('Mở bản nháp', 'Open the draft')}</Link>}
+          </p>
+        )}
       </div>
     </div>
   )

@@ -5,7 +5,7 @@
 import { dbAll, dbGet, nowSec } from '../db.js'
 import { env } from '../env.js'
 import { notFound, requireSession, requireWallet, route, type Ctx } from '../http.js'
-import { chainRoles, adminRoleOf, historyFor, requireAdmin } from '../lib/rulings.js'
+import { chainRoles, adminRoleOf, historyFor, isPenaltyWallet, requireAdmin } from '../lib/rulings.js'
 import { parseTerms, type VersionRow } from '../lib/deals.js'
 import { OPEN_CASE_STAGES, isPublicId, overdueTriggerAt } from '../../src/shared/protocol.js'
 import { z } from 'zod'
@@ -30,7 +30,52 @@ function overdueNow(row: EscrowRow): number {
 route('GET', '/admin/me', async (ctx) => {
   const s = requireSession(ctx)
   const role = await adminRoleOf(s.wallet)
-  return { role }
+  return { role, penaltyWallet: await isPenaltyWallet(s.wallet) }
+})
+
+/**
+ * Penalties paid to the penalty wallet, per escrow. Only that wallet may see this. Amounts come from
+ * indexed events; the app reads the live claimable amount from the chain before sending a claim.
+ */
+route('GET', '/admin/penalty', async (ctx) => {
+  const s = requireWallet(ctx)
+  if (!(await isPenaltyWallet(s.wallet))) throw notFound()
+  const wallet = s.wallet.toLowerCase()
+  const events = await dbAll<{ on_chain_id: string; name: string; args_json: string }>(
+    `SELECT on_chain_id, name, args_json FROM chain_events
+     WHERE chain_id = ? AND contract = ? AND name IN ('CreditAssigned', 'Claimed') ORDER BY block_number, log_index`,
+    env.chainId,
+    env.escrow,
+  )
+  const byEscrow = new Map<string, { credited: bigint; claimed: bigint }>()
+  for (const e of events) {
+    const a = JSON.parse(e.args_json) as { account?: string; amount?: string }
+    if (a.account?.toLowerCase() !== wallet || !e.on_chain_id) continue
+    const row = byEscrow.get(e.on_chain_id) ?? { credited: 0n, claimed: 0n }
+    if (e.name === 'CreditAssigned') row.credited += BigInt(a.amount ?? '0')
+    else row.claimed += BigInt(a.amount ?? '0')
+    byEscrow.set(e.on_chain_id, row)
+  }
+  const items = []
+  for (const [onChainId, t] of byEscrow) {
+    const esc = await dbGet<Pick<EscrowRow, 'public_id' | 'agreement_hash'>>(
+      'SELECT public_id, agreement_hash FROM escrows WHERE chain_id = ? AND contract = ? AND on_chain_id = ?',
+      env.chainId,
+      env.escrow,
+      onChainId,
+    )
+    const v = esc
+      ? await dbGet<Pick<VersionRow, 'terms_json'>>('SELECT terms_json FROM agreement_versions WHERE agreement_hash = ?', esc.agreement_hash)
+      : null
+    items.push({
+      onChainId,
+      publicId: esc?.public_id ?? null,
+      title: v ? parseTerms(v.terms_json).title : null,
+      credited: t.credited.toString(),
+      claimed: t.claimed.toString(),
+    })
+  }
+  return { wallet: s.wallet, items }
 })
 
 route('GET', '/admin/roles', async (ctx) => {

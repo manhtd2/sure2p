@@ -17,11 +17,12 @@ export function Layout() {
   // The console link only appears for the wallet that holds a ruling role onchain.
   const adminRole = useQuery({
     queryKey: ['admin-me', me?.wallet ?? null],
-    queryFn: () => api<{ role: 'arbiter' | 'reviewer' | null }>('/admin/me'),
+    queryFn: () => api<{ role: 'arbiter' | 'reviewer' | null; penaltyWallet: boolean }>('/admin/me'),
     enabled: signedIn && Boolean(me?.wallet),
     staleTime: 30_000,
     retry: false,
-  }).data?.role
+  }).data
+  const hasAdminAccess = Boolean(adminRole?.role || adminRole?.penaltyWallet)
 
   async function signOut() {
     try {
@@ -57,7 +58,7 @@ export function Layout() {
             <NavLink to="/join" className={link}>
               {tr('Tham gia', 'Join')}
             </NavLink>
-            {adminRole && (
+            {hasAdminAccess && (
               <NavLink to="/admin" className={link}>
                 Admin
               </NavLink>
@@ -94,7 +95,7 @@ export function Layout() {
           <NavLink to="/join" className={link}>
             {tr('Tham gia', 'Join')}
           </NavLink>
-          {adminRole && (
+          {hasAdminAccess && (
             <NavLink to="/admin" className={link}>
               Admin
             </NavLink>

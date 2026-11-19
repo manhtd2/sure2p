@@ -4,3 +4,6 @@
 {"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1794842825965}
 {"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1794848012342}
 {"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1794848559635}
+{"level":"debug","message":"[vite] connected.","timestamp":1794883000975}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1794885965802}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1795080691468}

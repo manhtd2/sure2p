@@ -153,6 +153,8 @@ route('GET', '/transactions', async (ctx) => {
       price: terms.priceUnits,
       myRole: d.creator_account === s.accountId ? d.creator_role : d.creator_role === 'buyer' ? 'seller' : 'buyer',
       updatedAt: d.updated_at,
+      /** The creator may delete a draft nobody has joined yet. */
+      canDelete: d.creator_account === s.accountId && !d.counterparty_account && d.status !== 'submitted',
     })
   }
   if (wallets.length > 0) {

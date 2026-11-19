@@ -12,6 +12,7 @@ Recorded where the build made a choice, filled a gap, or deviates from the produ
 - Rulings are sent from the admin's own wallet. Written reasons are stored in the database by hash (`case_notes`); only the hash goes onchain.
 - Evidence bytes are stored in the database (2 MB cap) so a serverless deploy needs no extra storage service.
 - The signed policy text is now `sure2p-policy-v2` and describes rulings, appeal and penalties. Agreements signed under v1 are not affected.
+- Description files: the file hashes are put in the signed terms rather than stored separately, so locking follows from the existing signature and the agreement hash already recorded onchain; no contract change was needed. Bytes live in the database (3 MB per file because the upload goes through a 4.5 MB serverless request). The signed policy text was not changed.
 - Penalty wallet equals the owner address by your choice. The owner cannot rule or move funds.
 
 ## Contract design

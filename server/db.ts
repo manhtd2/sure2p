@@ -238,6 +238,21 @@ CREATE TABLE IF NOT EXISTS evidence (
 );
 CREATE INDEX IF NOT EXISTS idx_evidence_public ON evidence(public_id, created_at);
 
+-- Description files the Buyer attaches to a draft. Content is addressed by sha256 and never updated,
+-- so a file referenced by a signed agreement cannot change.
+CREATE TABLE IF NOT EXISTS draft_files (
+  id TEXT PRIMARY KEY,
+  draft_id TEXT NOT NULL REFERENCES drafts(id),
+  sha256 TEXT NOT NULL,
+  filename TEXT NOT NULL,
+  mime TEXT NOT NULL,
+  size INTEGER NOT NULL,
+  content BLOB NOT NULL,
+  uploaded_by TEXT NOT NULL REFERENCES accounts(id),
+  created_at INTEGER NOT NULL,
+  UNIQUE (draft_id, sha256)
+);
+
 -- Plain-text reasons behind a hash that was sent onchain (ruling reasons, appeal reasons).
 CREATE TABLE IF NOT EXISTS case_notes (
   hash TEXT PRIMARY KEY,

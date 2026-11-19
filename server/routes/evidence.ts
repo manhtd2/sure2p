@@ -10,7 +10,8 @@ import { dbAll, dbGet, dbRun, nowSec } from '../db.js'
 import { env } from '../env.js'
 import { HttpError, notFound, rateLimit, requireSession, route, type Ctx } from '../http.js'
 import { randomToken } from '../lib/crypto.js'
-import { ALLOWED_MIME, matchesMime } from '../lib/evidenceFile.js'
+import { ALLOWED_MIME, bytesFromDb, fileResponse, matchesMime } from '../lib/evidenceFile.js'
+import { escrowAttachmentResponse } from '../lib/attachments.js'
 import { adminRoleOf, anchoredHashes } from '../lib/rulings.js'
 import { OPEN_CASE_STAGES, isPublicId } from '../../src/shared/protocol.js'
 import { memberEscrow, type EscrowRow } from './transactions.js'
@@ -92,6 +93,13 @@ route('GET', '/transactions/:publicId/evidence', async (ctx) => {
   // on Vercel it has no function file of its own, so the app calls this shape.
   const evidenceId = ctx.url.searchParams.get('evidenceId')
   if (evidenceId) return downloadEvidence(ctx, row, evidenceId)
+  // ?attachment=<sha256> downloads a description file from the signed agreement (locked once both sides signed).
+  const attachment = ctx.url.searchParams.get('attachment')
+  if (attachment) {
+    const res = await escrowAttachmentResponse(row.agreement_hash, attachment)
+    if (!res) throw notFound()
+    return res
+  }
   return { files: await evidenceList(row), maxBytes: MAX_EVIDENCE_BYTES, mimeTypes: ALLOWED_MIME }
 })
 
@@ -138,16 +146,7 @@ async function downloadEvidence(ctx: Ctx, row: EscrowRow, evidenceId: string): P
     row.public_id,
   )
   if (!file) throw notFound()
-  // Drivers return a Uint8Array (local) or an ArrayBuffer (libSQL).
-  const bytes = file.content instanceof Uint8Array ? file.content : new Uint8Array(file.content as ArrayBuffer)
-  return new Response(new Blob([bytes as BlobPart], { type: file.mime }), {
-    status: 200,
-    headers: {
-      'Content-Type': file.mime,
-      'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(file.filename)}`,
-      'Content-Security-Policy': "default-src 'none'; sandbox",
-    },
-  })
+  return fileResponse(bytesFromDb(file.content), file.mime, file.filename)
 }
 
 route('GET', '/transactions/:publicId/evidence/:evidenceId', async (ctx) => {

@@ -1,11 +1,22 @@
 import { useLang } from '@/i18n'
 import { formatDateTime, usdcWithCommas } from '@/lib/format'
 import type { DealTerms } from '@/shared/protocol'
+import { AttachmentList } from './AttachmentList'
 
 const hours = (s: number) => `${Math.round((s / 3600) * 10) / 10}h`
 
 /** Read-only view of the business terms both parties sign. */
-export function TermsSummary({ terms }: { terms: DealTerms }) {
+export function TermsSummary({
+  terms,
+  attachmentHref,
+  lock,
+  missingAttachments,
+}: {
+  terms: DealTerms
+  attachmentHref?: (sha256: string) => string
+  lock?: 'signed' | 'evidence'
+  missingAttachments?: string[]
+}) {
   const { tr, lang } = useLang()
   const rows: Array<[string, string]> = [
     [tr('Mô tả', 'Description'), terms.description],
@@ -25,6 +36,12 @@ export function TermsSummary({ terms }: { terms: DealTerms }) {
           <dd className="whitespace-pre-wrap break-words text-[var(--ink-2)]">{value}</dd>
         </div>
       ))}
+      {(terms.attachments?.length ?? 0) > 0 && (
+        <div className="sm:col-span-2">
+          <dt className="label !mb-1">{tr('Tài liệu mô tả hàng của Buyer', "Buyer's description files")}</dt>
+          <dd><AttachmentList files={terms.attachments!} href={attachmentHref} lock={lock} missing={missingAttachments} /></dd>
+        </div>
+      )}
     </dl>
   )
 }
@@ -36,6 +53,7 @@ export function AgreementDiff({ previous, current }: { previous: DealTerms; curr
     if (key === 'priceUnits') return `${usdcWithCommas(t.priceUnits)} USDC`
     if (key === 'handoverDeadline') return formatDateTime(t.handoverDeadline, lang)
     if (key === 'buyerResponseSeconds' || key === 'inspectionSeconds') return hours(t[key])
+    if (key === 'attachments') return (t.attachments ?? []).map((a) => a.name).join(', ') || tr('Không có', 'None')
     return String(t[key])
   }
   const labels: Record<keyof DealTerms, string> = {
@@ -48,8 +66,13 @@ export function AgreementDiff({ previous, current }: { previous: DealTerms; curr
     handoverDeadline: tr('Hạn bàn giao', 'Handover deadline'),
     buyerResponseSeconds: tr('Buyer phản hồi', 'Buyer response'),
     inspectionSeconds: tr('Thời gian kiểm tra', 'Inspection window'),
+    attachments: tr('Tài liệu mô tả', 'Description files'),
   }
-  const changed = (Object.keys(labels) as Array<keyof DealTerms>).filter((k) => previous[k] !== current[k])
+  const same = (k: keyof DealTerms) =>
+    k === 'attachments'
+      ? (previous.attachments ?? []).map((a) => a.sha256).sort().join() === (current.attachments ?? []).map((a) => a.sha256).sort().join()
+      : previous[k] === current[k]
+  const changed = (Object.keys(labels) as Array<keyof DealTerms>).filter((k) => !same(k))
   if (changed.length === 0) {
     return <p className="text-xs text-[var(--muted)]">{tr('Nội dung giống phiên bản trước (chỉ làm mới chữ ký).', 'Same content as the previous version (signatures refreshed only).')}</p>
   }

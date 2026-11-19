@@ -1,5 +1,6 @@
 /** Zod schemas shared by the API and the browser forms. */
 import { z } from 'zod'
+import { ALLOWED_MIME, ATTACHMENT_MAX_BYTES, ATTACHMENT_MAX_FILES, mimeForFilename } from './files.js'
 import {
   FUNDING_WINDOW_SECONDS,
   HANDOVER_MARGIN_SECONDS,
@@ -8,6 +9,15 @@ import {
 } from './protocol.js'
 
 const uintString = z.string().regex(/^\d{1,30}$/, 'Expected a non-negative integer string')
+
+export const attachmentRefSchema = z
+  .object({
+    name: z.string().trim().min(1).max(120),
+    mime: z.enum(ALLOWED_MIME),
+    size: z.number().int().min(1).max(ATTACHMENT_MAX_BYTES),
+    sha256: z.string().regex(/^[0-9a-f]{64}$/, 'Expected a lowercase hex sha256'),
+  })
+  .refine((a) => mimeForFilename(a.name) === a.mime, 'File type does not match the file name')
 
 export const dealTermsSchema = z.object({
   title: z.string().trim().min(3).max(120),
@@ -19,6 +29,11 @@ export const dealTermsSchema = z.object({
   handoverDeadline: z.number().int().positive(),
   buyerResponseSeconds: z.number().int().min(MIN_DURATION_SECONDS).max(MAX_DURATION_SECONDS),
   inspectionSeconds: z.number().int().min(MIN_DURATION_SECONDS).max(MAX_DURATION_SECONDS),
+  attachments: z
+    .array(attachmentRefSchema)
+    .max(ATTACHMENT_MAX_FILES)
+    .refine((list) => new Set(list.map((a) => a.sha256)).size === list.length, 'The same file was attached twice')
+    .optional(),
 })
 
 /** Terms must leave room for the 24h funding window after the escrow is created. */

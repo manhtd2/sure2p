@@ -24,3 +24,28 @@ describe('evidence file type check', () => {
     expect(matchesMime(bytes(0xff, 0xfe, 0xfd), 'text/plain')).toBe(false)
   })
 })
+
+describe('office and csv files', () => {
+  const ooxml = bytes(0x50, 0x4b, 0x03, 0x04, 0x14, 0x00)
+  const ole = bytes(0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1, 0x00)
+  const xlsx = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  const docx = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+
+  it('accepts zip containers as xlsx and docx, and OLE containers as xls and doc', () => {
+    expect(matchesMime(ooxml, xlsx)).toBe(true)
+    expect(matchesMime(ooxml, docx)).toBe(true)
+    expect(matchesMime(ole, 'application/vnd.ms-excel')).toBe(true)
+    expect(matchesMime(ole, 'application/msword')).toBe(true)
+  })
+
+  it('rejects the wrong container and renamed scripts', () => {
+    expect(matchesMime(ole, xlsx)).toBe(false)
+    expect(matchesMime(ooxml, 'application/vnd.ms-excel')).toBe(false)
+    expect(matchesMime(new TextEncoder().encode('<html></html>'), xlsx)).toBe(false)
+  })
+
+  it('accepts csv text and rejects binary csv', () => {
+    expect(matchesMime(new TextEncoder().encode('ten,so luong\nbut,2\n'), 'text/csv')).toBe(true)
+    expect(matchesMime(ooxml, 'text/csv')).toBe(false)
+  })
+})

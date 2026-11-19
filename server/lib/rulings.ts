@@ -126,16 +126,17 @@ export async function anchoredHashes(onChainId: string): Promise<Map<string, { t
 
 export type AdminRole = 'arbiter' | 'reviewer'
 
-let roleCache: { at: number; arbiter: Address; reviewer: Address } | null = null
+let roleCache: { at: number; arbiter: Address; reviewer: Address; penaltyWallet: Address } | null = null
 
 /** Current onchain ruling roles. Cached briefly: the chain stays the source of truth. */
-export async function chainRoles(): Promise<{ arbiter: Address; reviewer: Address }> {
+export async function chainRoles(): Promise<{ arbiter: Address; reviewer: Address; penaltyWallet: Address }> {
   if (roleCache && Date.now() - roleCache.at < 15_000) return roleCache
-  const [arbiter, reviewer] = await Promise.all([
+  const [arbiter, reviewer, penaltyWallet] = await Promise.all([
     publicClient.readContract({ address: env.escrow, abi: escrowAbi, functionName: 'arbiter' }),
     publicClient.readContract({ address: env.escrow, abi: escrowAbi, functionName: 'appealReviewer' }),
+    publicClient.readContract({ address: env.escrow, abi: escrowAbi, functionName: 'penaltyWallet' }),
   ])
-  roleCache = { at: Date.now(), arbiter: getAddress(arbiter), reviewer: getAddress(reviewer) }
+  roleCache = { at: Date.now(), arbiter: getAddress(arbiter), reviewer: getAddress(reviewer), penaltyWallet: getAddress(penaltyWallet) }
   return roleCache
 }
 
@@ -154,4 +155,12 @@ export async function requireAdmin(ctx: Ctx): Promise<{ role: AdminRole; wallet:
   const role = await adminRoleOf(s.wallet)
   if (!role) throw notFound()
   return { role, wallet: getAddress(s.wallet) }
+}
+
+/** True when the wallet is the contract's immutable penalty wallet. */
+export async function isPenaltyWallet(wallet: string | null): Promise<boolean> {
+  if (!wallet) return false
+  const roles = await chainRoles().catch(() => null)
+  if (!roles) throw new HttpError(503, 'chain_unavailable', 'Cannot read the penalty wallet right now')
+  return getAddress(wallet) === roles.penaltyWallet
 }

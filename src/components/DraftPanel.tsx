@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAccount, useSignTypedData, useWriteContract } from 'wagmi'
 import { CheckCircle2, CircleDashed, Loader2, PenLine, RefreshCw } from 'lucide-react'
@@ -11,8 +11,11 @@ import type { DraftView } from '@/lib/types'
 import { agreementFromJson, agreementTypes, eip712Domain } from '@/shared/protocol'
 import { handoverDeadlineError } from '@/shared/validation'
 import { useTx, parseTxError } from '@/hooks/useTx'
+import { refForFile, uploadAttachment } from '@/lib/attachments'
+import { FILE_ACCEPT } from '@/shared/files'
 import { useNow } from '@/hooks/useNow'
 import { AmountBreakdown } from './AmountBreakdown'
+import { DeleteDraftButton } from './DeleteDraftButton'
 import { InvitePanel } from './InvitePanel'
 import { RiskDisclosure } from './RiskDisclosure'
 import { AgreementDiff, TermsSummary } from './TermsSummary'
@@ -25,6 +28,7 @@ export function DraftPanel({ draftId }: { draftId: string }) {
   const { tr, lang } = useLang()
   const qc = useQueryClient()
   const { address } = useAccount()
+  const navigate = useNavigate()
   const { signTypedDataAsync } = useSignTypedData()
   const { writeContractAsync } = useWriteContract()
   const tx = useTx(tr)
@@ -58,10 +62,29 @@ export function DraftPanel({ draftId }: { draftId: string }) {
   const deadlineTooClose = Boolean(handoverDeadlineError(terms.handoverDeadline, nowSec))
   const submitted = draft.status === 'submitted' && Boolean(draft.createTxHash)
 
-  async function counter(next: DealTerms) {
+  async function reupload(file: File) {
     setBusy(true)
     setActionError(null)
     try {
+      const ref = await refForFile(file)
+      if (!ref || !(draft?.missingAttachments ?? []).includes(ref.sha256)) {
+        setActionError(tr('File này không khớp với file đã khai trong thỏa thuận (mã băm khác).', 'This file does not match the one named in the agreement (different hash).'))
+        return
+      }
+      await uploadAttachment(draftId, file)
+      await qc.invalidateQueries({ queryKey: ['draft', draftId] })
+    } catch (e) {
+      setActionError(errorText(e, tr))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function counter(next: DealTerms, files: File[]) {
+    setBusy(true)
+    setActionError(null)
+    try {
+      for (const f of files) await uploadAttachment(draftId, f)
       await api(`/drafts/${draftId}?action=counteroffer`, { body: { terms: next } })
       setEditing(false)
       setAck(false)
@@ -137,7 +160,24 @@ export function DraftPanel({ draftId }: { draftId: string }) {
         <div className="space-y-5">
           <section className="card space-y-4 p-5">
             <h2 className="display text-lg font-semibold">{tr('Điều khoản hiện tại', 'Current terms')}</h2>
-            <TermsSummary terms={terms} />
+            <TermsSummary
+              terms={terms}
+              attachmentHref={(sha) => `/api/drafts/${draftId}?attachment=${sha}`}
+              lock={bothSigned ? 'signed' : undefined}
+              missingAttachments={draft.missingAttachments}
+            />
+            {draft.missingAttachments.length > 0 && (
+              <div className="rounded-xl bg-[#fff4d6] p-3 text-sm text-[var(--warn)]" role="alert">
+                {mine === 'buyer' ? (
+                  <label className="flex cursor-pointer flex-wrap items-center gap-2">
+                    <span>{tr('Một file mô tả chưa được tải lên. Chọn lại đúng file đó để tải lên:', 'A description file was not uploaded. Choose the same file again to upload it:')}</span>
+                    <input type="file" accept={FILE_ACCEPT} disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void reupload(f) }} />
+                  </label>
+                ) : (
+                  tr('Buyer chưa tải lên đủ file mô tả. Bạn chưa thể ký cho đến khi đủ.', 'The Buyer has not uploaded every description file yet. You cannot sign until they do.')
+                )}
+              </div>
+            )}
             {previous && (
               <details className="inner p-3">
                 <summary className="cursor-pointer text-sm font-semibold">{tr(`So sánh với v${previous.version}`, `Compare with v${previous.version}`)}</summary>
@@ -170,7 +210,7 @@ export function DraftPanel({ draftId }: { draftId: string }) {
                   {walletMismatch && (
                     <p className="text-sm text-[var(--danger)]">{tr(`Hãy kết nối ví ${shortAddress(mine === 'buyer' ? draft.buyerWallet : draft.sellerWallet)} đã gắn với giao dịch này.`, `Connect the wallet ${shortAddress(mine === 'buyer' ? draft.buyerWallet : draft.sellerWallet)} bound to this deal.`)}</p>
                   )}
-                  <button type="button" className="btn btn-primary w-full" disabled={!ack || busy || walletMismatch} onClick={() => void sign()}>
+                  <button type="button" className="btn btn-primary w-full" disabled={!ack || busy || walletMismatch || draft.missingAttachments.length > 0} onClick={() => void sign()}>
                     {busy ? <Loader2 className="size-4 animate-spin" /> : <PenLine className="size-4" />} {tr('Ký phiên bản này', 'Sign this version')}
                   </button>
                 </>
@@ -186,7 +226,7 @@ export function DraftPanel({ draftId }: { draftId: string }) {
                       : tr('Phiên bản này sắp hết hạn chữ ký. Hãy làm mới thỏa thuận.', 'This version is about to expire for signing. Renew the agreement.')}
                   </p>
                   {!deadlineTooClose && (
-                    <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => void counter(terms)}>
+                    <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => void counter(terms, [])}>
                       <RefreshCw className="size-4" /> {tr('Làm mới thỏa thuận (cùng nội dung)', 'Renew agreement (same terms)')}
                     </button>
                   )}
@@ -220,7 +260,7 @@ export function DraftPanel({ draftId }: { draftId: string }) {
                 </button>
               </div>
               {editing ? (
-                <TermsForm initial={terms} submitLabel={tr('Gửi phiên bản mới', 'Send new version')} busy={busy} onSubmit={(t) => void counter(t)} />
+                <TermsForm initial={terms} canAttach={mine === 'buyer'} submitLabel={tr('Gửi phiên bản mới', 'Send new version')} busy={busy} onSubmit={(t, files) => void counter(t, files)} />
               ) : (
                 <p className="text-sm text-[var(--muted)]">{tr('Đề xuất lại tạo một phiên bản bất biến mới; chữ ký trước đó không còn hiệu lực.', 'A counteroffer creates a new immutable version; earlier signatures stop applying.')}</p>
               )}
@@ -234,7 +274,8 @@ export function DraftPanel({ draftId }: { draftId: string }) {
                   {editing ? tr('Đóng', 'Close') : tr('Chỉnh', 'Edit')}
                 </button>
               </div>
-              {editing && <TermsForm initial={terms} submitLabel={tr('Lưu phiên bản mới', 'Save new version')} busy={busy} onSubmit={(t) => void counter(t)} />}
+              {editing && <TermsForm initial={terms} canAttach={mine === 'buyer'} submitLabel={tr('Lưu phiên bản mới', 'Save new version')} busy={busy} onSubmit={(t, files) => void counter(t, files)} />}
+              {draft.status !== 'submitted' && <DeleteDraftButton draftId={draft.id} onDeleted={() => void navigate('/transactions')} />}
             </section>
           )}
           {actionError && <p className="text-sm text-[var(--danger)]" role="alert">{actionError}</p>}
