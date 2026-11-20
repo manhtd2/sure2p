@@ -58,6 +58,11 @@ export function Layout() {
             <NavLink to="/join" className={link}>
               {tr('Tham gia', 'Join')}
             </NavLink>
+            {signedIn && (
+              <NavLink to="/account" className={link}>
+                {tr('Tài khoản', 'Account')}
+              </NavLink>
+            )}
             {hasAdminAccess && (
               <NavLink to="/admin" className={link}>
                 Admin

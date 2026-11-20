@@ -3,7 +3,7 @@ import { getAddress, isAddressEqual, recoverMessageAddress, type Hex } from 'vie
 import { createSiweMessage, parseSiweMessage } from 'viem/siwe'
 import { audit, dbGet, dbRun, nowSec } from '../db.js'
 import { env } from '../env.js'
-import { encryptPhone, hmac, newId, randomHex, safeEqual } from '../lib/crypto.js'
+import { decryptPhone, encryptPhone, hmac, newId, randomHex, safeEqual } from '../lib/crypto.js'
 import {
   HttpError,
   createSession,
@@ -28,10 +28,23 @@ function requestHost(ctx: Ctx): string {
   return ctx.req.headers.get('x-forwarded-host') ?? ctx.req.headers.get('host') ?? ctx.url.host
 }
 
-function meResponse(ctx: Ctx) {
+/** "+84•••••••12": the country prefix and the last two digits only. The full number is never sent back. */
+async function maskedPhone(accountId: string): Promise<string | null> {
+  const row = await dbGet<{ phone_enc: string }>('SELECT phone_enc FROM accounts WHERE id = ?', accountId)
+  if (!row) return null
+  try {
+    const p = decryptPhone(row.phone_enc)
+    return p.length > 6 ? `${p.slice(0, 3)}${'•'.repeat(p.length - 5)}${p.slice(-2)}` : null
+  } catch {
+    return null
+  }
+}
+
+async function meResponse(ctx: Ctx) {
   const s = ctx.session
   if (!s) return { authenticated: false, otpProvider: env.otpProvider }
   return {
+    phoneMasked: await maskedPhone(s.accountId),
     authenticated: true,
     accountId: s.accountId,
     accountStatus: s.accountStatus,

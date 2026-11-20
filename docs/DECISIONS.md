@@ -75,3 +75,9 @@ Nothing below has been decided; no value has been invented. See `docs/SPEC_GAP.m
 - The app now reads V3. V2 had 0 escrows and 0 outstanding funds, so nothing was stranded. The V3 source is not verified on the explorer.
 - App changes: new ABI, EIP-712 domain version 3, `ruling_decisions` projection table (JSON decision fields), per-party ruling form and summary. Post-deploy integration tests were offered and not run.
 - Still open: registry `SECURITY_ROLE` is held by the shared platform deployer wallet; ban flow, admin split and account page are not built yet.
+
+## V3 end-to-end run (2026-11-20)
+
+- Ran `scripts/e2e-smoke.ts` against the V3 contract with two throwaway wallets funded from the faucet: 45 of 45 checks passed (create, fund, handover, early completion, claims, dispute, dual-signed settlement, reconciliation). The run used the local API; the live API could not be driven yet because the production deploy returns 404 for `POST /api/drafts/:id/invitations` (the nested path has no function file under the 12-function limit). Fixed by moving it to `POST /api/drafts/:id?action=invitations`; needs a push and redeploy, then the same script is re-run with `E2E_API=https://sure2p.vercel.app/api`.
+- Not exercised: Arbiter and Appeal Reviewer transactions (their keys are held by the owner). Those paths are covered by the 184 V3 contract tests only.
+- The script now polls for the post-claim balance, because the RPC node serving a read can lag the receipt by a block.

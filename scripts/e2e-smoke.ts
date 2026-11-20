@@ -60,7 +60,13 @@ class Session {
       if (pair.endsWith('=')) this.cookie = ''
       else this.cookie = pair
     }
-    const json = (await res.json()) as T
+    const raw = await res.text()
+    let json: T
+    try {
+      json = JSON.parse(raw) as T
+    } catch {
+      throw new Error(`${method} ${path} -> ${res.status} non-JSON body: ${raw.slice(0, 200)}`)
+    }
     if (res.status !== expectStatus) throw new Error(`${method} ${path} -> ${res.status} ${JSON.stringify(json)}`)
     return json
   }
@@ -114,7 +120,7 @@ async function negotiateAndCreate(seller: Session, buyer: Session, priceUnits: b
     inspectionSeconds: 72 * 3600,
   }
   const { id: draftId } = await seller.call<{ id: string }>('POST', '/drafts', { role: 'seller', terms })
-  const inv = await seller.call<{ token: string; code: string }>('POST', `/drafts/${draftId}/invitations`, {})
+  const inv = await seller.call<{ token: string; code: string }>('POST', `/drafts/${draftId}?action=invitations`, {})
   const peek = await buyer.call<{ title: string }>('POST', '/invitations/peek', { token: inv.token })
   record('invite peek via token', peek.title === title)
   const peekCode = await buyer.call<{ title: string }>('POST', '/invitations/peek', { code: inv.code })
@@ -187,7 +193,11 @@ async function claimAll(label: string, a: PrivateKeyAccount, id: bigint) {
   })
   const before = await publicClient.readContract({ address: USDC, abi: erc20Abi, functionName: 'balanceOf', args: [a.address] })
   await send(a, `${label} claims ${owed} units`, () => wallet(a).writeContract({ address: ESCROW, abi: escrowAbi, functionName: 'claim', args: [id] }))
-  const after = await publicClient.readContract({ address: USDC, abi: erc20Abi, functionName: 'balanceOf', args: [a.address] })
+  // The node serving this read can be a block behind the one that returned the receipt, so poll for the new balance.
+  const after = await waitFor('balance after claim', async () => {
+    const v = await publicClient.readContract({ address: USDC, abi: erc20Abi, functionName: 'balanceOf', args: [a.address] })
+    return v > before ? v : null
+  }, 30_000)
   // Gas is paid in the same USDC, so the wallet gains the credit minus a small fee.
   record(`${label} wallet balance rose by about the credit`, after > before && owed - (after - before) < 100_000n, `credit=${owed} delta=${after - before}`)
 }

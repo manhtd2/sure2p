@@ -28,7 +28,7 @@ export function InvitePanel({ draft }: { draft: DraftView }) {
     setBusy(true)
     setError(null)
     try {
-      setIssued(await api<Issued>(`/drafts/${draft.id}/invitations`, { body: {} }))
+      setIssued(await api<Issued>(`/drafts/${draft.id}?action=invitations`, { body: {} }))
       await qc.invalidateQueries({ queryKey: ['draft', draft.id] })
     } catch (e) {
       setError(errorText(e, tr))

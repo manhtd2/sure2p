@@ -8,6 +8,7 @@ Built with [Arc Studio](https://studio.arc.io)
 
 - Sign in with a phone number and a wallet signature. In this build the phone code is a clearly labeled mock for development and testnet.
 - Create a deal as buyer or seller, then invite the other side with a link, a short code or a QR code. The other side can accept or counter, and both sign the same final version.
+- Account page (masked phone, status, linked wallet, language, sign out).
 - Public pages without sign-in: how it works, Trust (live onchain figures), Status (live probes), docs (22 articles), FAQ, policies, fees, changelog and a contact form. Legal text that still needs decisions is shown as clearly labelled gaps.
 - The Buyer can attach description files for the goods (Excel, Word, PDF, TXT, CSV or images, up to 5 files of 3 MB). After both sides sign, the files are locked, and once the escrow is created they stay as evidence the parties and the Arbiter can compare against the goods in a dispute.
 - Delete a draft you created if nobody has joined it yet (for example an invitation made by mistake).

@@ -13,6 +13,7 @@ import {
   type Ctx,
 } from '../http.js'
 import { newDraftRef, randomToken } from '../lib/crypto.js'
+import { createInvitation } from './invitations.js'
 import { ATTACHMENT_MAX_BYTES, mimeForFilename } from '../../src/shared/files.js'
 import { MAX_ATTACH_BODY, MAX_DRAFT_FILES, attachmentsOf, draftFileResponse, missingAttachments } from '../lib/attachments.js'
 import { matchesMime } from '../lib/evidenceFile.js'
@@ -303,5 +304,6 @@ route('POST', '/drafts/:id', async (ctx) => {
   if (action === 'reopen') return reopenDraft(ctx)
   if (action === 'delete') return deleteDraft(ctx)
   if (action === 'attach') return attachFile(ctx)
+  if (action === 'invitations') return createInvitation(ctx)
   throw notFound()
 })

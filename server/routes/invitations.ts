@@ -44,7 +44,7 @@ async function usableInvite(ctx: Ctx, input: { token?: string; code?: string }):
   return invite
 }
 
-route('POST', '/drafts/:id/invitations', async (ctx) => {
+export async function createInvitation(ctx: Ctx) {
   const s = requireWallet(ctx)
   requireNewTradeEligible(s)
   const { draft, accountId } = await memberDraft(ctx, ctx.params.id)
@@ -74,7 +74,9 @@ route('POST', '/drafts/:id/invitations', async (ctx) => {
   await audit(accountId, 'invite.issued', draft.id, { invitationId: id })
   // Plaintext secrets are returned exactly once and are never stored.
   return { invitationId: id, token, code, expiresAt: nowSec() + INVITE_TTL }
-})
+}
+
+route('POST', '/drafts/:id/invitations', createInvitation)
 
 async function revokeInvitation(ctx: Ctx): Promise<{ ok: boolean }> {
   requireWallet(ctx)

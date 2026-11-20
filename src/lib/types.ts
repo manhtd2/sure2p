@@ -4,6 +4,7 @@ export interface Me {
   authenticated: boolean
   otpProvider: string
   accountId?: string
+  phoneMasked?: string | null
   accountStatus?: 'active' | 'banned' | 'limited'
   wallet?: string | null
   chainId?: number | null
