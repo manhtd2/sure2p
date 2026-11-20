@@ -208,7 +208,11 @@ export async function handle(req: Request): Promise<Response> {
     // background loop is running, and never fatal if the chain is unreachable).
     if (
       req.method === 'GET' &&
-      (url.pathname === '/health' || url.pathname.startsWith('/transactions') || url.pathname.startsWith('/admin'))
+      (url.pathname === '/health' ||
+        url.pathname.startsWith('/transactions') ||
+        url.pathname.startsWith('/admin') ||
+        // The draft page polls for the publicId right after createEscrow, so it must trigger a sync too.
+        url.pathname.startsWith('/drafts'))
     ) {
       await maybeSyncIndexer().catch(() => undefined)
     }

@@ -11,6 +11,8 @@ interface Entry {
 }
 
 const ENTRIES: Entry[] = [
+  { date: '2026-11-20', area: 'Quản trị', kind: 'Thay đổi', title: 'Console quản trị tách thành Tổng quan, Hồ sơ, Kháng cáo, Ký quỹ, Tài khoản, Nhật ký và Cài đặt; luồng cấm tài khoản cho quản trị bảo mật', impact: 'Chỉ ví giữ vai trò trên chuỗi mới vào được. Cấm chỉ chặn giao dịch mới và cần phán quyết cuối xác nhận gian lận.', state: 'repo' },
+  { date: '2026-11-20', area: 'Giao dịch', kind: 'Sửa lỗi', title: 'Trang bản nháp kích hoạt bộ quét sau khi tạo ký quỹ, để mã công khai hiện ra trên Vercel', impact: 'Trước đó mã công khai có thể chậm hiện cho tới khi mở trang giao dịch.', state: 'repo' },
   { date: '2026-11-20', area: 'Tài khoản', kind: 'Sửa lỗi', title: 'Tạo lời mời hoạt động trên Vercel (trước đó trả 404); thêm trang Tài khoản', impact: 'Đường tạo lời mời nay dùng cùng dạng ?action= như các đường khác.', state: 'repo' },
   { date: '2026-11-20', area: 'Hợp đồng', kind: 'Thay đổi', title: 'Hợp đồng ký quỹ bản 3: phán quyết theo từng bên (hoàn cọc riêng, cờ lỗi và gian lận cho mỗi bên), gắn với mã băm thỏa thuận và gốc bằng chứng', impact: 'Địa chỉ mới ở trang Tin cậy. Bản 2 không có giao dịch nào nên không có gì bị kẹt.', state: 'released' },
   { date: '2026-11-20', area: 'Công khai', kind: 'Thêm mới', title: 'Trang Tin cậy, Trạng thái, tài liệu, chính sách, hỏi đáp và liên hệ', impact: 'Mọi số liệu trên chuỗi đọc trực tiếp; không đọc được thì ghi Chưa rõ.', state: 'repo' },

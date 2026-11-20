@@ -1,9 +1,10 @@
-import { getAddress, type Address } from 'viem'
+import { getAddress, keccak256, toBytes, type Address } from 'viem'
 import { dbAll, dbGet } from '../db.js'
 import { env } from '../env.js'
 import { HttpError, notFound, requireWallet, type Ctx } from '../http.js'
 import { publicClient } from '../indexer/index.js'
 import { escrowAbi } from '../../src/shared/escrowAbi.js'
+import { registryAbi } from '../../src/shared/registryAbi.js'
 
 interface RulingRow {
   prelim_by: string | null
@@ -150,4 +151,29 @@ export async function isPenaltyWallet(wallet: string | null): Promise<boolean> {
   const roles = await chainRoles().catch(() => null)
   if (!roles) throw new HttpError(503, 'chain_unavailable', 'Cannot read the penalty wallet right now')
   return getAddress(wallet) === roles.penaltyWallet
+}
+
+const SECURITY_ROLE = keccak256(toBytes('SECURITY_ROLE'))
+
+/** True when the wallet holds the registry's SECURITY_ROLE onchain. This role alone may ban accounts. */
+export async function isSecurityAdmin(wallet: string | null): Promise<boolean> {
+  if (!wallet) return false
+  try {
+    return await publicClient.readContract({
+      address: env.registry,
+      abi: registryAbi,
+      functionName: 'hasRole',
+      args: [SECURITY_ROLE, getAddress(wallet)],
+    })
+  } catch {
+    return false
+  }
+}
+
+/** Console access for the three kinds of operator: arbiter, appeal reviewer, or registry security admin. */
+export async function requireOperator(ctx: Ctx): Promise<{ wallet: Address; role: AdminRole | null; security: boolean }> {
+  const s = requireWallet(ctx)
+  const [role, security] = await Promise.all([adminRoleOf(s.wallet), isSecurityAdmin(s.wallet)])
+  if (!role && !security) throw notFound()
+  return { wallet: getAddress(s.wallet), role, security }
 }

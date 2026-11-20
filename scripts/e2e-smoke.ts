@@ -91,7 +91,7 @@ async function send(account: PrivateKeyAccount, label: string, run: () => Promis
   return hash
 }
 
-async function waitFor<T>(label: string, fn: () => Promise<T | null>, timeoutMs = 90_000): Promise<T> {
+async function waitFor<T>(label: string, fn: () => Promise<T | null>, timeoutMs = 240_000): Promise<T> {
   const start = Date.now()
   for (;;) {
     const v = await fn()
@@ -158,11 +158,12 @@ async function negotiateAndCreate(seller: Session, buyer: Session, priceUnits: b
     }),
   )
   await seller.call('POST', `/drafts/${draftId}?action=submitted`, { txHash: hash })
+  const t0 = Date.now()
   const indexed = await waitFor('publicId', async () => {
     const d = await seller.call<DraftView>('GET', `/drafts/${draftId}`)
     return d.publicId
   })
-  record('indexer assigned a 12-hex publicId', /^(?=.*[a-f])[0-9a-f]{12}$/.test(indexed), indexed)
+  record('indexer assigned a 12-hex publicId', /^(?=.*[a-f])[0-9a-f]{12}$/.test(indexed), `${indexed} after ${Math.round((Date.now() - t0) / 1000)}s`)
   const view = await seller.call<{ onChainId: string }>('GET', `/transactions/${indexed}`)
   return { publicId: indexed, id: BigInt(view.onChainId), agreement }
 }

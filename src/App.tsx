@@ -9,7 +9,13 @@ import Transactions from '@/pages/Transactions'
 import NewTransaction from '@/pages/NewTransaction'
 import Join from '@/pages/Join'
 import TransactionDetail from '@/pages/TransactionDetail'
-import Admin from '@/pages/Admin'
+import Admin, { CaseDetailPage, CasesPage } from '@/pages/Admin'
+import AdminOverview from '@/pages/admin/Overview'
+import AdminEscrows from '@/pages/admin/Escrows'
+import AdminAccounts from '@/pages/admin/Accounts'
+import AdminAudit from '@/pages/admin/Audit'
+import AdminSettings from '@/pages/admin/Settings'
+import { PenaltyPanel } from '@/components/PenaltyPanel'
 import Account from '@/pages/Account'
 import HowItWorks from '@/pages/public/HowItWorks'
 import Trust from '@/pages/public/Trust'
@@ -49,7 +55,17 @@ export default function App() {
             <Route path="transactions/new" element={<RequireAuth><NewTransaction /></RequireAuth>} />
             <Route path="transactions/:ref" element={<RequireAuth><TransactionDetail /></RequireAuth>} />
             <Route path="account" element={<RequireAuth><Account /></RequireAuth>} />
-            <Route path="admin" element={<RequireAuth><Admin /></RequireAuth>} />
+            <Route path="admin" element={<RequireAuth><Admin /></RequireAuth>}>
+              <Route index element={<AdminOverview />} />
+              <Route path="cases" element={<CasesPage />} />
+              <Route path="cases/:publicId" element={<CaseDetailPage />} />
+              <Route path="appeals" element={<CasesPage appealsOnly />} />
+              <Route path="escrows" element={<AdminEscrows />} />
+              <Route path="accounts" element={<AdminAccounts />} />
+              <Route path="audit" element={<AdminAudit />} />
+              <Route path="settings" element={<AdminSettings />} />
+              <Route path="penalty" element={<PenaltyPanel />} />
+            </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

@@ -2,13 +2,18 @@
  * Admin console API. Access is decided by the chain: the signed-in wallet must currently be the
  * escrow's arbiter or appeal reviewer. Rulings themselves are sent from that wallet, never by the server.
  */
-import { dbAll, dbGet, nowSec } from '../db.js'
+import { audit, dbAll, dbGet, dbRun, nowSec } from '../db.js'
 import { env } from '../env.js'
-import { notFound, requireSession, requireWallet, route, type Ctx } from '../http.js'
-import { chainRoles, adminRoleOf, historyFor, isPenaltyWallet, requireAdmin } from '../lib/rulings.js'
+import { HttpError, notFound, requireSession, requireWallet, route, type Ctx } from '../http.js'
+import { chainRoles, adminRoleOf, historyFor, isPenaltyWallet, isSecurityAdmin, requireAdmin, requireOperator } from '../lib/rulings.js'
 import { parseTerms, type VersionRow } from '../lib/deals.js'
 import { OPEN_CASE_STAGES, isPublicId, overdueTriggerAt } from '../../src/shared/protocol.js'
+import { getAddress, keccak256, toBytes, type Address } from 'viem'
 import { z } from 'zod'
+import { decryptPhone } from '../lib/crypto.js'
+import { indexerStatus, publicClient } from '../indexer/index.js'
+import { escrowAbi } from '../../src/shared/escrowAbi.js'
+import { registryAbi } from '../../src/shared/registryAbi.js'
 import { rateLimit } from '../http.js'
 import { evidenceList, saveNote } from './evidence.js'
 import { escrowView, type EscrowRow } from './transactions.js'
@@ -30,7 +35,7 @@ function overdueNow(row: EscrowRow): number {
 route('GET', '/admin/me', async (ctx) => {
   const s = requireSession(ctx)
   const role = await adminRoleOf(s.wallet)
-  return { role, penaltyWallet: await isPenaltyWallet(s.wallet) }
+  return { role, penaltyWallet: await isPenaltyWallet(s.wallet), security: await isSecurityAdmin(s.wallet) }
 })
 
 /**
@@ -176,4 +181,157 @@ route('POST', '/admin/cases/:publicId/notes', saveAdminNote)
 route('POST', '/admin/cases/:publicId', async (ctx) => {
   if (ctx.url.searchParams.get('action') === 'notes') return saveAdminNote(ctx)
   throw notFound()
+})
+
+
+/** Case counts by stage and the numbers an operator checks first. */
+route('GET', '/admin/overview', async (ctx) => {
+  const op = await requireOperator(ctx)
+  const rows = await dbAll<{ stage: string; c: number }>(
+    'SELECT stage, COUNT(*) AS c FROM escrows WHERE orphaned = 0 AND chain_id = ? AND contract = ? GROUP BY stage',
+    env.chainId,
+    env.escrow,
+  )
+  const active = await dbAll<EscrowRow>(
+    `SELECT * FROM escrows WHERE orphaned = 0 AND chain_id = ? AND contract = ? AND stage = 'active'`,
+    env.chainId,
+    env.escrow,
+  )
+  const idx = indexerStatus()
+  return {
+    role: op.role,
+    security: op.security,
+    byStage: Object.fromEntries(rows.map((r) => [r.stage, Number(r.c)])),
+    activeNeedingFlag: active.filter((r) => overdueNow(r) !== 0).length,
+    reconciliation: idx.reconciliation,
+    indexer: { blocksBehind: idx.behind, lastError: idx.lastError },
+  }
+})
+
+/** Ruling and role events plus admin account actions, newest first. Read-only. */
+route('GET', '/admin/audit', async (ctx) => {
+  await requireOperator(ctx)
+  const events = await dbAll<{ name: string; on_chain_id: string | null; block_number: number; block_timestamp: number; tx_hash: string; args_json: string }>(
+    `SELECT name, on_chain_id, block_number, block_timestamp, tx_hash, args_json FROM chain_events
+     WHERE chain_id = ? AND contract = ? AND name IN
+       ('PreliminaryRulingIssued','RulingAppealed','FinalRulingIssued','RulingFinalized','ArbiterChanged','AppealReviewerChanged','OwnershipTransferStarted','OwnershipTransferred')
+     ORDER BY block_number DESC, log_index DESC LIMIT 100`,
+    env.chainId,
+    env.escrow,
+  )
+  const actions = await dbAll<{ at: number; action: string; subject: string | null; detail: string | null }>(
+    `SELECT at, action, subject, detail FROM audit_log WHERE action LIKE 'account.%' OR action LIKE 'admin.%' ORDER BY id DESC LIMIT 100`,
+  )
+  const publicIds = new Map<string, string>()
+  for (const e of events) {
+    if (!e.on_chain_id || publicIds.has(e.on_chain_id)) continue
+    const r = await dbGet<{ public_id: string }>(
+      'SELECT public_id FROM escrows WHERE chain_id = ? AND contract = ? AND on_chain_id = ?',
+      env.chainId,
+      env.escrow,
+      e.on_chain_id,
+    )
+    if (r) publicIds.set(e.on_chain_id, r.public_id)
+  }
+  return {
+    events: events.map((e) => ({
+      name: e.name,
+      publicId: e.on_chain_id ? (publicIds.get(e.on_chain_id) ?? null) : null,
+      blockNumber: e.block_number,
+      timestamp: e.block_timestamp,
+      txHash: e.tx_hash,
+      args: JSON.parse(e.args_json) as Record<string, string>,
+    })),
+    actions,
+  }
+})
+
+function maskPhone(enc: string): string | null {
+  try {
+    const p = decryptPhone(enc)
+    return p.length > 6 ? `${p.slice(0, 3)}${'\u2022'.repeat(p.length - 5)}${p.slice(-2)}` : null
+  } catch {
+    return null
+  }
+}
+
+interface FraudRow {
+  on_chain_id: string
+  public_id: string
+  buyer_wallet: string
+  seller_wallet: string
+}
+
+/** Wallets named as fraudulent by a FINAL ruling, checked against the contract's own `fraudConfirmed`. */
+async function confirmedFraud() {
+  const rows = await dbAll<FraudRow>(
+    `SELECT e.on_chain_id, e.public_id, e.buyer_wallet, e.seller_wallet FROM ruling_decisions r
+     JOIN escrows e ON e.chain_id = r.chain_id AND e.contract = r.contract AND e.on_chain_id = r.on_chain_id
+     WHERE r.chain_id = ? AND r.contract = ? AND r.finalized_at IS NOT NULL AND e.orphaned = 0
+       AND (r.final_json LIKE '%"buyerFraud":true%' OR r.final_json LIKE '%"sellerFraud":true%')`,
+    env.chainId,
+    env.escrow,
+  )
+  const out = []
+  for (const r of rows) {
+    const [buyerFraud, sellerFraud] = await publicClient.readContract({
+      address: env.escrow,
+      abi: escrowAbi,
+      functionName: 'fraudConfirmed',
+      args: [BigInt(r.on_chain_id)],
+    })
+    for (const [side, flagged, wallet] of [
+      ['buyer', buyerFraud, r.buyer_wallet],
+      ['seller', sellerFraud, r.seller_wallet],
+    ] as const) {
+      if (!flagged) continue
+      const link = await dbGet<{ account_id: string }>('SELECT account_id FROM wallet_links WHERE address = ?', getAddress(wallet))
+      const acct = link
+        ? await dbGet<{ id: string; status: string; phone_enc: string }>('SELECT id, status, phone_enc FROM accounts WHERE id = ?', link.account_id)
+        : null
+      const registryBanned = await publicClient.readContract({
+        address: env.registry,
+        abi: registryAbi,
+        functionName: 'banned',
+        args: [getAddress(wallet) as Address],
+      })
+      out.push({
+        publicId: r.public_id,
+        side,
+        wallet: getAddress(wallet),
+        accountStatus: acct?.status ?? null,
+        phoneMasked: acct ? maskPhone(acct.phone_enc) : null,
+        registryBanned,
+      })
+    }
+  }
+  return out
+}
+
+route('GET', '/admin/accounts', async (ctx) => {
+  const op = await requireOperator(ctx)
+  return { security: op.security, items: await confirmedFraud() }
+})
+
+const banSchema = z.object({ publicId: z.string().length(12), side: z.enum(['buyer', 'seller']) })
+
+/**
+ * POST /admin/accounts?action=ban|unban. Security admin only (registry SECURITY_ROLE). A ban needs the contract's
+ * own `fraudConfirmed` to name that side; it only stops the account opening or joining NEW deals. Existing
+ * deals and claims are untouched. The wallet-level ban in the registry is sent from the admin's own wallet.
+ */
+route('POST', '/admin/accounts', async (ctx) => {
+  const op = await requireOperator(ctx)
+  if (!op.security) throw new HttpError(403, 'security_role_required', 'Only the registry security admin can change account bans')
+  const action = ctx.url.searchParams.get('action')
+  if (action !== 'ban' && action !== 'unban') throw notFound()
+  rateLimit(`admin-ban:${op.wallet}`, 20, 600)
+  const body = await ctx.body(banSchema)
+  const hit = (await confirmedFraud()).find((i) => i.publicId === body.publicId && i.side === body.side)
+  if (!hit) throw new HttpError(409, 'fraud_not_confirmed', 'The contract does not show a final ruling with a fraud flag for this side')
+  const link = await dbGet<{ account_id: string }>('SELECT account_id FROM wallet_links WHERE address = ?', hit.wallet)
+  if (!link) throw new HttpError(409, 'no_linked_account', 'No sure2p account is linked to this wallet')
+  await dbRun('UPDATE accounts SET status = ? WHERE id = ?', action === 'ban' ? 'banned' : 'active', link.account_id)
+  await audit(link.account_id, `account.${action}`, body.publicId, { side: body.side, by: op.wallet, reasonHash: keccak256(toBytes(`${body.publicId}:${body.side}`)) })
+  return { ok: true }
 })

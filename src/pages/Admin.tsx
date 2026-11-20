@@ -1,5 +1,5 @@
-import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { NavLink, Outlet, useNavigate, useParams } from 'react-router-dom'
 import { useWriteContract } from 'wagmi'
 import { ArrowLeft, Gavel } from 'lucide-react'
 import { ChainAction } from '@/components/ChainAction'
@@ -30,15 +30,21 @@ interface CaseItem {
   ruling: RulingView | null
 }
 
-/** Admin console: open cases for the onchain Arbiter and Appeal Reviewer. Access is decided by the chain. */
+export interface AdminMe {
+  role: 'arbiter' | 'reviewer' | null
+  penaltyWallet: boolean
+  security: boolean
+}
+
+/** Admin console shell. Access is decided by the chain: arbiter, appeal reviewer, security admin or penalty wallet. */
 export default function Admin() {
   const { tr } = useLang()
-  const [selected, setSelected] = useState<string | null>(null)
-  const me = useQuery({ queryKey: ['admin-me'], queryFn: () => api<{ role: 'arbiter' | 'reviewer' | null; penaltyWallet: boolean }>('/admin/me') })
+  const me = useQuery({ queryKey: ['admin-me'], queryFn: () => api<AdminMe>('/admin/me') })
 
   if (me.isLoading) return <Loader />
   if (me.error) return <p className="card p-6 text-sm text-[var(--danger)]">{errorText(me.error, tr)}</p>
-  if (!me.data?.role && me.data?.penaltyWallet) {
+  const m = me.data
+  if (!m?.role && !m?.security && m?.penaltyWallet) {
     return (
       <div className="space-y-5">
         <div>
@@ -49,39 +55,63 @@ export default function Admin() {
       </div>
     )
   }
-  if (!me.data?.role) {
+  if (!m?.role && !m?.security) {
     return (
       <section className="card space-y-2 p-6">
         <h1 className="display text-2xl font-bold">{tr('Admin console', 'Admin console')}</h1>
         <p className="text-sm text-[var(--muted)]">
           {tr(
-            'Ví bạn đang đăng nhập không phải Arbiter, Appeal Reviewer hay ví penalty của hợp đồng. Hãy đăng nhập bằng đúng ví được giao vai trò.',
-            'The wallet you are signed in with is not the contract\'s Arbiter, Appeal Reviewer or penalty wallet. Sign in with the wallet that holds the role.',
+            'Ví bạn đang đăng nhập không phải Arbiter, Appeal Reviewer, quản trị bảo mật hay ví penalty của hợp đồng. Hãy đăng nhập bằng đúng ví được giao vai trò.',
+            'The wallet you are signed in with is not the contract\'s Arbiter, Appeal Reviewer, security admin or penalty wallet. Sign in with the wallet that holds the role.',
           )}
         </p>
       </section>
     )
   }
-  return selected ? (
-    <CaseDetail publicId={selected} onBack={() => setSelected(null)} />
-  ) : (
-    <CaseList role={me.data.role} onOpen={setSelected} />
+  const tab = ({ isActive }: { isActive: boolean }) =>
+    `rounded-xl px-3 py-2 text-sm font-medium ${isActive ? 'bg-[var(--accent)] text-white' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`
+  return (
+    <div className="space-y-5">
+      <nav className="flex flex-wrap gap-1 border-b border-[var(--border)] pb-3" aria-label={tr('Mục quản trị', 'Admin sections')}>
+        <NavLink end to="/admin" className={tab}>{tr('Tổng quan', 'Overview')}</NavLink>
+        <NavLink to="/admin/cases" className={tab}>{tr('Hồ sơ', 'Cases')}</NavLink>
+        <NavLink to="/admin/appeals" className={tab}>{tr('Kháng cáo', 'Appeals')}</NavLink>
+        <NavLink to="/admin/escrows" className={tab}>{tr('Ký quỹ', 'Escrows')}</NavLink>
+        <NavLink to="/admin/accounts" className={tab}>{tr('Tài khoản', 'Accounts')}</NavLink>
+        <NavLink to="/admin/audit" className={tab}>{tr('Nhật ký', 'Audit')}</NavLink>
+        <NavLink to="/admin/settings" className={tab}>{tr('Cài đặt', 'Settings')}</NavLink>
+        {m?.penaltyWallet && <NavLink to="/admin/penalty" className={tab}>{tr('Tiền phạt', 'Penalties')}</NavLink>}
+      </nav>
+      <Outlet context={m} />
+    </div>
   )
 }
 
-function CaseList({ role, onOpen }: { role: 'arbiter' | 'reviewer'; onOpen: (id: string) => void }) {
+/** All open cases, or only the appeal queue for the Appeal Reviewer. */
+export function CasesPage({ appealsOnly = false }: { appealsOnly?: boolean }) {
+  const { tr } = useLang()
+  const navigate = useNavigate()
+  const me = useQuery({ queryKey: ['admin-me'], queryFn: () => api<AdminMe>('/admin/me') }).data
+  if (!me?.role) {
+    return <p className="card p-6 text-sm text-[var(--muted)]">{tr('Chỉ Arbiter và Appeal Reviewer xem được hồ sơ tranh chấp.', 'Only the Arbiter and the Appeal Reviewer can see dispute cases.')}</p>
+  }
+  return <CaseList role={me.role} appealsOnly={appealsOnly} onOpen={(id) => void navigate(`/admin/cases/${id}`)} />
+}
+
+function CaseList({ role, onOpen, appealsOnly }: { role: 'arbiter' | 'reviewer'; onOpen: (id: string) => void; appealsOnly: boolean }) {
   const { tr } = useLang()
   const list = useQuery({
     queryKey: ['admin-cases'],
     queryFn: () => api<{ role: string; items: CaseItem[] }>('/admin/cases'),
     refetchInterval: 8000,
   })
-  const items = list.data?.items ?? []
+  const all = list.data?.items ?? []
+  const items = appealsOnly ? all.filter((c) => c.stage === 'appealed') : all
   return (
     <div className="space-y-5">
       <div>
         <span className="chip">{role === 'arbiter' ? 'Arbiter' : 'Appeal Reviewer'}</span>
-        <h1 className="display mt-2 flex items-center gap-2 text-3xl font-bold"><Gavel className="size-6" /> {tr('Các vụ đang mở', 'Open cases')}</h1>
+        <h1 className="display mt-2 flex items-center gap-2 text-3xl font-bold"><Gavel className="size-6" /> {appealsOnly ? tr('Hàng đợi kháng cáo', 'Appeal queue') : tr('Các vụ đang mở', 'Open cases')}</h1>
         <p className="text-sm text-[var(--muted)]">
           {role === 'arbiter'
             ? tr('Bạn ra phán quyết sơ bộ cho các vụ quá hạn hoặc tranh chấp.', 'You issue preliminary rulings on overdue or disputed deals.')
@@ -112,7 +142,10 @@ function CaseList({ role, onOpen }: { role: 'arbiter' | 'reviewer'; onOpen: (id:
   )
 }
 
-function CaseDetail({ publicId, onBack }: { publicId: string; onBack: () => void }) {
+export function CaseDetailPage() {
+  const { publicId = '' } = useParams()
+  const navigate = useNavigate()
+  const onBack = () => void navigate('/admin/cases')
   const { tr, lang } = useLang()
   const qc = useQueryClient()
   const now = useNow()
