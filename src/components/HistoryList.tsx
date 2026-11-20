@@ -43,7 +43,7 @@ export function HistoryList({ events }: { events: HistoryEvent[] }) {
               : e.name === 'OverdueFlagged'
                 ? tr(`Điều kiện ${e.args.trigger}`, `Trigger ${e.args.trigger}`)
                 : e.name === 'PreliminaryRulingIssued' || e.name === 'FinalRulingIssued'
-                  ? `${tr('Hoàn giá cho Buyer', 'Buyer price refund')}: ${usdc(e.args.buyerPriceRefund)} USDC · ${tr('phạt', 'penalty')}: ${usdc(e.args.penalty)} USDC`
+                  ? `${tr('Hoàn giá cho Buyer', 'Buyer price refund')}: ${usdc(e.args.buyerPriceRefund)} USDC · ${tr('cọc hoàn Buyer / Seller', 'deposit refund Buyer / Seller')}: ${usdc(e.args.buyerDepositRefund)} / ${usdc(e.args.sellerDepositRefund)} USDC`
                   : null
         return (
           <li key={`${e.txHash}-${e.logIndex}`} className="flex items-start justify-between gap-3 text-sm">

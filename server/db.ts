@@ -197,26 +197,21 @@ CREATE TABLE IF NOT EXISTS chain_events (
 CREATE INDEX IF NOT EXISTS idx_events_block ON chain_events(block_number);
 CREATE INDEX IF NOT EXISTS idx_events_escrow ON chain_events(on_chain_id);
 
--- Ruling projection, rebuilt from chain events. One row per (contract, escrow).
-CREATE TABLE IF NOT EXISTS rulings (
+-- Ruling projection (V3 shape), rebuilt from chain events. One row per (contract, escrow).
+-- The decision columns hold JSON so the per-party refund and flag fields can grow without an ALTER.
+CREATE TABLE IF NOT EXISTS ruling_decisions (
   chain_id INTEGER NOT NULL,
   contract TEXT NOT NULL,
   on_chain_id TEXT NOT NULL,
   prelim_by TEXT,
   prelim_at INTEGER,
   appeal_deadline INTEGER,
-  prelim_refund TEXT,
-  prelim_fault INTEGER,
-  prelim_penalty TEXT,
-  prelim_reason TEXT,
+  prelim_json TEXT,
   appealed_by TEXT,
   appealed_at INTEGER,
   appeal_reason TEXT,
   final_by TEXT,
-  final_refund TEXT,
-  final_fault INTEGER,
-  final_penalty TEXT,
-  final_reason TEXT,
+  final_json TEXT,
   finalized_at INTEGER,
   finalized_by_appeal INTEGER,
   PRIMARY KEY (chain_id, contract, on_chain_id)

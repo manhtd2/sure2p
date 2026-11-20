@@ -1,4 +1,4 @@
-// Generated from contracts/out/Sure2PEscrowV2.sol. Do not edit by hand.
+// Generated from contracts/out/Sure2PEscrowV3.sol. Do not edit by hand.
 export const escrowAbi = [
   {
     "type": "constructor",
@@ -272,7 +272,7 @@ export const escrowAbi = [
       {
         "name": "a",
         "type": "tuple",
-        "internalType": "struct Sure2PEscrowV2.Agreement",
+        "internalType": "struct Sure2PEscrowV3.Agreement",
         "components": [
           {
             "name": "buyer",
@@ -503,7 +503,7 @@ export const escrowAbi = [
       {
         "name": "s",
         "type": "tuple",
-        "internalType": "struct Sure2PEscrowV2.Settlement",
+        "internalType": "struct Sure2PEscrowV3.Settlement",
         "components": [
           {
             "name": "escrowId",
@@ -600,6 +600,30 @@ export const escrowAbi = [
   },
   {
     "type": "function",
+    "name": "fraudConfirmed",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "buyerFraud",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "sellerFraud",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "fundBuyer",
     "inputs": [
       {
@@ -638,7 +662,7 @@ export const escrowAbi = [
       {
         "name": "",
         "type": "tuple",
-        "internalType": "struct Sure2PEscrowV2.Escrow",
+        "internalType": "struct Sure2PEscrowV3.Escrow",
         "components": [
           {
             "name": "buyer",
@@ -753,7 +777,7 @@ export const escrowAbi = [
           {
             "name": "state",
             "type": "uint8",
-            "internalType": "enum Sure2PEscrowV2.State"
+            "internalType": "enum Sure2PEscrowV3.State"
           },
           {
             "name": "disputeOpenedBy",
@@ -789,7 +813,7 @@ export const escrowAbi = [
       {
         "name": "",
         "type": "tuple",
-        "internalType": "struct Sure2PEscrowV2.Ruling",
+        "internalType": "struct Sure2PEscrowV3.Ruling",
         "components": [
           {
             "name": "issuedBy",
@@ -807,24 +831,61 @@ export const escrowAbi = [
             "internalType": "uint64"
           },
           {
-            "name": "buyerPriceRefund",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "penalty",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "fault",
-            "type": "uint8",
-            "internalType": "enum Sure2PEscrowV2.Fault"
-          },
-          {
-            "name": "reasonHash",
-            "type": "bytes32",
-            "internalType": "bytes32"
+            "name": "input",
+            "type": "tuple",
+            "internalType": "struct Sure2PEscrowV3.RulingInput",
+            "components": [
+              {
+                "name": "agreementHash",
+                "type": "bytes32",
+                "internalType": "bytes32"
+              },
+              {
+                "name": "buyerPriceRefund",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "buyerDepositRefund",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "sellerDepositRefund",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "buyerAtFault",
+                "type": "bool",
+                "internalType": "bool"
+              },
+              {
+                "name": "sellerAtFault",
+                "type": "bool",
+                "internalType": "bool"
+              },
+              {
+                "name": "buyerFraud",
+                "type": "bool",
+                "internalType": "bool"
+              },
+              {
+                "name": "sellerFraud",
+                "type": "bool",
+                "internalType": "bool"
+              },
+              {
+                "name": "reasonHash",
+                "type": "bytes32",
+                "internalType": "bytes32"
+              },
+              {
+                "name": "evidenceRoot",
+                "type": "bytes32",
+                "internalType": "bytes32"
+              }
+            ]
           },
           {
             "name": "appealed",
@@ -858,7 +919,7 @@ export const escrowAbi = [
       {
         "name": "a",
         "type": "tuple",
-        "internalType": "struct Sure2PEscrowV2.Agreement",
+        "internalType": "struct Sure2PEscrowV3.Agreement",
         "components": [
           {
             "name": "buyer",
@@ -944,7 +1005,7 @@ export const escrowAbi = [
       {
         "name": "s",
         "type": "tuple",
-        "internalType": "struct Sure2PEscrowV2.Settlement",
+        "internalType": "struct Sure2PEscrowV3.Settlement",
         "components": [
           {
             "name": "escrowId",
@@ -993,24 +1054,61 @@ export const escrowAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "buyerPriceRefund",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "fault",
-        "type": "uint8",
-        "internalType": "enum Sure2PEscrowV2.Fault"
-      },
-      {
-        "name": "penalty",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "reasonHash",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        "name": "input",
+        "type": "tuple",
+        "internalType": "struct Sure2PEscrowV3.RulingInput",
+        "components": [
+          {
+            "name": "agreementHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "buyerPriceRefund",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "buyerDepositRefund",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "sellerDepositRefund",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "buyerAtFault",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "sellerAtFault",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "buyerFraud",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "sellerFraud",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "reasonHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "evidenceRoot",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          }
+        ]
       }
     ],
     "outputs": [],
@@ -1026,24 +1124,61 @@ export const escrowAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "buyerPriceRefund",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "fault",
-        "type": "uint8",
-        "internalType": "enum Sure2PEscrowV2.Fault"
-      },
-      {
-        "name": "penalty",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "reasonHash",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        "name": "input",
+        "type": "tuple",
+        "internalType": "struct Sure2PEscrowV3.RulingInput",
+        "components": [
+          {
+            "name": "agreementHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "buyerPriceRefund",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "buyerDepositRefund",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "sellerDepositRefund",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "buyerAtFault",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "sellerAtFault",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "buyerFraud",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "sellerFraud",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "reasonHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "evidenceRoot",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          }
+        ]
       }
     ],
     "outputs": [],
@@ -1066,6 +1201,99 @@ export const escrowAbi = [
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "outcomeOf",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct Sure2PEscrowV3.Outcome",
+        "components": [
+          {
+            "name": "decidedBy",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "decidedAt",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "byAppeal",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "input",
+            "type": "tuple",
+            "internalType": "struct Sure2PEscrowV3.RulingInput",
+            "components": [
+              {
+                "name": "agreementHash",
+                "type": "bytes32",
+                "internalType": "bytes32"
+              },
+              {
+                "name": "buyerPriceRefund",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "buyerDepositRefund",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "sellerDepositRefund",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "buyerAtFault",
+                "type": "bool",
+                "internalType": "bool"
+              },
+              {
+                "name": "sellerAtFault",
+                "type": "bool",
+                "internalType": "bool"
+              },
+              {
+                "name": "buyerFraud",
+                "type": "bool",
+                "internalType": "bool"
+              },
+              {
+                "name": "sellerFraud",
+                "type": "bool",
+                "internalType": "bool"
+              },
+              {
+                "name": "reasonHash",
+                "type": "bytes32",
+                "internalType": "bytes32"
+              },
+              {
+                "name": "evidenceRoot",
+                "type": "bytes32",
+                "internalType": "bytes32"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -1121,6 +1349,92 @@ export const escrowAbi = [
         "name": "",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "previewRuling",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "input",
+        "type": "tuple",
+        "internalType": "struct Sure2PEscrowV3.RulingInput",
+        "components": [
+          {
+            "name": "agreementHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "buyerPriceRefund",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "buyerDepositRefund",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "sellerDepositRefund",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "buyerAtFault",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "sellerAtFault",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "buyerFraud",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "sellerFraud",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "reasonHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "evidenceRoot",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "buyerGets",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "sellerGets",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "penaltyGets",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -1575,19 +1889,49 @@ export const escrowAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "fault",
-        "type": "uint8",
-        "indexed": false,
-        "internalType": "enum Sure2PEscrowV2.Fault"
-      },
-      {
-        "name": "penalty",
+        "name": "buyerDepositRefund",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
       },
       {
+        "name": "sellerDepositRefund",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "buyerAtFault",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      },
+      {
+        "name": "sellerAtFault",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      },
+      {
+        "name": "buyerFraud",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      },
+      {
+        "name": "sellerFraud",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      },
+      {
         "name": "reasonHash",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "evidenceRoot",
         "type": "bytes32",
         "indexed": false,
         "internalType": "bytes32"
@@ -1738,19 +2082,49 @@ export const escrowAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "fault",
-        "type": "uint8",
-        "indexed": false,
-        "internalType": "enum Sure2PEscrowV2.Fault"
-      },
-      {
-        "name": "penalty",
+        "name": "buyerDepositRefund",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
       },
       {
+        "name": "sellerDepositRefund",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "buyerAtFault",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      },
+      {
+        "name": "sellerAtFault",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      },
+      {
+        "name": "buyerFraud",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      },
+      {
+        "name": "sellerFraud",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      },
+      {
         "name": "reasonHash",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "evidenceRoot",
         "type": "bytes32",
         "indexed": false,
         "internalType": "bytes32"
@@ -1919,6 +2293,17 @@ export const escrowAbi = [
   },
   {
     "type": "error",
+    "name": "FraudRequiresFault",
+    "inputs": [
+      {
+        "name": "buyerSide",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "HandoverNotDeclared",
     "inputs": []
   },
@@ -1959,11 +2344,6 @@ export const escrowAbi = [
   },
   {
     "type": "error",
-    "name": "InvalidRuling",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "InvalidSettlement",
     "inputs": []
   },
@@ -1990,7 +2370,7 @@ export const escrowAbi = [
       {
         "name": "actual",
         "type": "uint8",
-        "internalType": "enum Sure2PEscrowV2.State"
+        "internalType": "enum Sure2PEscrowV3.State"
       }
     ]
   },
@@ -2003,6 +2383,27 @@ export const escrowAbi = [
     "type": "error",
     "name": "NoCredit",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NonFaultPartyMustBeRefunded",
+    "inputs": [
+      {
+        "name": "buyerSide",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "supplied",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "required",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   },
   {
     "type": "error",
@@ -2040,6 +2441,38 @@ export const escrowAbi = [
     "type": "error",
     "name": "ReentrancyGuardReentrantCall",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "RulingAgreementMismatch",
+    "inputs": [
+      {
+        "name": "expected",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "supplied",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "RulingRefundTooLarge",
+    "inputs": [
+      {
+        "name": "supplied",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "max",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   },
   {
     "type": "error",

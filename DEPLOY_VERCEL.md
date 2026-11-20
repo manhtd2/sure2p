@@ -58,9 +58,9 @@ dev values and never paste a real secret into chat or docs.
 
 | Variable | Value | Notes |
 |---|---|---|
-| `VITE_SURE2P_ESCROW_ADDRESS` | `0xbac54f5f54516007b5db955ee45433920893d94a` | Deployed escrow V2 (Arc Testnet) |
+| `VITE_SURE2P_ESCROW_ADDRESS` | `0xab91b5239f65d9f125d0a1d5d93350f257dba33c` | Deployed escrow V3 (Arc Testnet) |
 | `VITE_ACCOUNT_REGISTRY_ADDRESS` | `0xfa6a19d4597a55f1f64003fb28fba199f8bafacd` | Deployed registry (Arc Testnet) |
-| `VITE_SURE2P_ESCROW_DEPLOY_TX` | `0x3da72eb58a398e576a02a4f8d6635998ee346c59b6c30ece9d15f49eaddccb08` | Where the indexer starts scanning (escrow V2 deployment) |
+| `VITE_SURE2P_ESCROW_DEPLOY_TX` | `0xffb3b587a9249b2110015072273202e57254a7102902794147c96a7dedf6141e` | Where the indexer starts scanning (escrow V3 deployment) |
 | `SESSION_SECRET` | 64 hex chars, generated | Required in production |
 | `PHONE_ENCRYPTION_KEY` | 64 hex chars, generated | Required in production |
 | `TURSO_DATABASE_URL` | `libsql://sure2p-<id>.turso.io` | From Step 1 |

@@ -158,8 +158,8 @@ export default function Trust() {
             </Row>
             <Row title={tr('Kiểm toán và rà soát bảo mật', 'Audit and security review')} source={tr('Liên kết độc lập', 'Independent link')} status={<Status tone="warn">{tr('Chưa được kiểm toán bên thứ ba', 'No third-party audit')}</Status>}>
               {tr(
-                'Hợp đồng đã có rà soát nội bộ và 335 ca kiểm thử (đơn vị, mờ, bất biến). Đây không phải kiểm toán độc lập.',
-                'The contract has an internal review and 335 tests (unit, fuzz, invariant). This is not an independent audit.',
+                'Hợp đồng đã có rà soát nội bộ và 519 ca kiểm thử (đơn vị, mờ, bất biến). Đây không phải kiểm toán độc lập.',
+                'The contract has an internal review and 519 tests (unit, fuzz, invariant). This is not an independent audit.',
               )}
             </Row>
           </tbody>

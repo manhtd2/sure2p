@@ -58,3 +58,20 @@ Nothing below has been decided; no value has been invented. See `docs/SPEC_GAP.m
 - Providers (D04): keep the labelled mock OTP and keep evidence in the database; the AI assistant is out of scope for this round and docs say so.
 - English translation of docs and policies is pending D10; the UI chrome is bilingual, long-form text is Vietnamese with a notice.
 - The V2 contract source is not verified on the explorer; the Trust page says so.
+
+## Sure2PEscrowV3 written and reviewed (2026-11-20)
+
+- Source: `contracts/Sure2PEscrowV3.sol`, from the approved `contracts/Sure2PEscrowV3-design.md`. Not deployed yet; waiting for the owner's final OK on the constructor arguments.
+- Review at maximum depth, two rounds. Round 1 fixed one low item (ruling errors now carry context). Round 2 left one low item (older errors such as `InvalidDuration` and `InvalidConfiguration` carry no values; same as V2, diagnostic only, accepted).
+- Open point for the owner: one functional finding rated high reads the spec as "fraud flags must not be visible before a final ruling". The approved design lets the parties see the flags in the preliminary ruling and only treats a final ruling as confirmed fraud (`fraudConfirmed`). Kept as designed; changing it needs a design change (salted commitment, reveal at finalization).
+- Tests: 184 new V3 tests, full suite 519 passing. Static analysis: no high or medium findings (8 low timestamp notes for the 24h and 72h windows, expected).
+- Contract size 22,800 bytes deploy size; 20,654 bytes runtime.
+- Dead code noted by the tester: the `AlreadyAppealed` branch is unreachable because the state check reverts first. Harmless.
+
+## Sure2PEscrowV3 deployed (2026-11-20)
+
+- Address `0xab91b5239f65d9f125d0a1d5d93350f257dba33c`, tx `0xffb3b587a9249b2110015072273202e57254a7102902794147c96a7dedf6141e`, Arc Testnet. Roles read back from the chain: owner and penalty wallet `0xEb8d...7253e`, arbiter `0x3026...FEB6`, appeal reviewer `0x835E...A88E`, USDC `0x3600...0000`, registry `0xFa6A...FACD` (reused).
+- The owner approved the deploy and the preliminary-ruling fraud-flag visibility as designed.
+- The app now reads V3. V2 had 0 escrows and 0 outstanding funds, so nothing was stranded. The V3 source is not verified on the explorer.
+- App changes: new ABI, EIP-712 domain version 3, `ruling_decisions` projection table (JSON decision fields), per-party ruling form and summary. Post-deploy integration tests were offered and not run.
+- Still open: registry `SECURITY_ROLE` is held by the shared platform deployer wallet; ban flow, admin split and account page are not built yet.

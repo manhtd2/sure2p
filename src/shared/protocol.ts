@@ -282,7 +282,7 @@ export function settlementFromJson(j: SettlementJson): SettlementStruct {
 export function eip712Domain(chainId: number, verifyingContract: Address) {
   return {
     name: 'Sure2PEscrow',
-    version: '2',
+    version: '3',
     chainId,
     verifyingContract: getAddress(verifyingContract),
   } as const

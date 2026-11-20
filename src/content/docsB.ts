@@ -59,7 +59,7 @@ export const docsB: Doc[] = [
     title: 'Phán quyết và kháng nghị',
     summary: 'Phán quyết sơ bộ, 72 giờ kháng nghị và phán quyết cuối.',
     blocks: [
-      { p: 'Người phán quyết là người thật, xử từng vụ dựa trên bằng chứng. Không có bảng phạt cố định. Người phán quyết chỉ phân bổ trong giới hạn của hợp đồng: tiền không vượt tổng ký quỹ, bên không có lỗi nhận lại đủ cọc, và bên có lỗi mất tối đa 100% cọc của chính mình. Tiền phạt chỉ về ví phạt cố định trong hợp đồng.' },
+      { p: 'Người phán quyết là người thật, xử từng vụ dựa trên bằng chứng. Không có bảng phạt cố định. Người phán quyết chỉ phân bổ trong giới hạn của hợp đồng: nhập riêng số giá hoàn cho người mua, số cọc hoàn cho từng bên, và bên nào có lỗi hoặc gian lận. Tiền không vượt tổng ký quỹ, bên không có lỗi nhận lại đủ cọc, và bên có lỗi mất tối đa 100% cọc của chính mình; cả hai bên đều có thể bị phạt trong cùng một vụ. Phán quyết cam kết với mã băm thỏa thuận của đúng vụ đó, mã băm lý do và gốc danh sách bằng chứng. Tiền phạt chỉ về ví phạt cố định trong hợp đồng.' },
       { steps: [
         'Phán quyết sơ bộ được gửi lên chuỗi. Chưa khoản nào nhận được. Đồng hồ kháng nghị 72 giờ bắt đầu.',
         'Không ai kháng nghị trong 72 giờ: bất kỳ ai hoàn tất phán quyết sơ bộ nguyên trạng.',
@@ -99,7 +99,7 @@ export const docsB: Doc[] = [
         'Chủ hợp đồng chỉ thay được người giữ vai trò phán quyết và xem xét, không chạm vào tiền.',
       ] },
       { p: 'Cấm tài khoản chỉ sau phán quyết cuối xác nhận gian lận, và chỉ chặn mở giao dịch mới. Không đóng băng hay tịch thu ví bên ngoài; khoản nhận hợp lệ của giao dịch cũ vẫn nhận được.' },
-      { warn: 'Hợp đồng đã được rà soát nội bộ và có 335 ca kiểm thử, nhưng chưa có kiểm toán độc lập. Xem trang Tin cậy để biết trạng thái.' },
+      { warn: 'Hợp đồng đã được rà soát nội bộ và có 519 ca kiểm thử, nhưng chưa có kiểm toán độc lập. Xem trang Tin cậy để biết trạng thái.' },
     ],
   },
 ]

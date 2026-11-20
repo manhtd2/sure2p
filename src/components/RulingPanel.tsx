@@ -17,35 +17,46 @@ interface Props {
   onChanged: () => void
 }
 
-/** What each side receives from a ruling, mirroring the contract's split. */
-export function rulingSplit(view: Pick<EscrowView, 'price' | 'buyerDeposit' | 'sellerDeposit'>, d: Pick<RulingDecisionView, 'buyerPriceRefund' | 'fault' | 'penalty'>) {
-  const price = BigInt(view.price)
+type RulingAmounts = Pick<RulingDecisionView, 'buyerPriceRefund' | 'buyerDepositRefund' | 'sellerDepositRefund'>
+
+/** What each side receives from a ruling, mirroring the contract's split (spec 2.4). */
+export function rulingSplit(view: Pick<EscrowView, 'price' | 'buyerDeposit' | 'sellerDeposit'>, d: RulingAmounts) {
   const refund = BigInt(d.buyerPriceRefund)
-  const penalty = BigInt(d.penalty)
+  const buyerDep = BigInt(view.buyerDeposit)
+  const sellerDep = BigInt(view.sellerDeposit)
+  const buyerDepRefund = BigInt(d.buyerDepositRefund)
+  const sellerDepRefund = BigInt(d.sellerDepositRefund)
   return {
-    buyer: refund + BigInt(view.buyerDeposit) - (d.fault === 1 ? penalty : 0n),
-    seller: price - refund + BigInt(view.sellerDeposit) - (d.fault === 2 ? penalty : 0n),
-    penalty,
+    buyer: refund + buyerDepRefund,
+    seller: BigInt(view.price) - refund + sellerDepRefund,
+    penalty: buyerDep - buyerDepRefund + (sellerDep - sellerDepRefund),
   }
 }
 
 export function DecisionSummary({ view, decision, reason }: { view: Pick<EscrowView, 'price' | 'buyerDeposit' | 'sellerDeposit'>; decision: RulingDecisionView; reason: string | undefined }) {
   const { tr } = useLang()
   const split = rulingSplit(view, decision)
-  const faultLabel = decision.fault === 1 ? 'Buyer' : decision.fault === 2 ? 'Seller' : tr('Không bên nào', 'Neither side')
+  const flag = (name: string, fault: boolean, fraud: boolean) =>
+    fault ? `${name}: ${tr('có lỗi', 'at fault')}${fraud ? ` + ${tr('gian lận', 'fraud')}` : ''}` : `${name}: ${tr('không lỗi', 'no fault')}`
   return (
     <div className="space-y-2">
       <dl className="grid gap-2 text-sm sm:grid-cols-3">
         <div className="inner p-3"><dt className="label">Buyer {tr('nhận', 'receives')}</dt><dd className="display text-xl font-bold tabular-nums">{usdcWithCommas(split.buyer)} <span className="text-xs font-medium text-[var(--subtle)]">USDC</span></dd></div>
         <div className="inner p-3"><dt className="label">Seller {tr('nhận', 'receives')}</dt><dd className="display text-xl font-bold tabular-nums">{usdcWithCommas(split.seller)} <span className="text-xs font-medium text-[var(--subtle)]">USDC</span></dd></div>
-        <div className="inner p-3"><dt className="label">{tr('Phạt', 'Penalty')}</dt><dd className="display text-xl font-bold tabular-nums">{usdcWithCommas(split.penalty)} <span className="text-xs font-medium text-[var(--subtle)]">USDC</span></dd></div>
+        <div className="inner p-3"><dt className="label">{tr('Ví phạt nhận', 'Penalty wallet receives')}</dt><dd className="display text-xl font-bold tabular-nums">{usdcWithCommas(split.penalty)} <span className="text-xs font-medium text-[var(--subtle)]">USDC</span></dd></div>
       </dl>
       <p className="text-xs text-[var(--muted)]">
-        {tr('Bên có lỗi', 'At fault')}: <strong>{faultLabel}</strong>. {tr('Người phán quyết', 'Ruled by')} <span className="mono">{shortAddress(decision.by)}</span>.
+        {flag('Buyer', decision.buyerAtFault, decision.buyerFraud)} · {flag('Seller', decision.sellerAtFault, decision.sellerFraud)}. {tr('Người phán quyết', 'Ruled by')} <span className="mono">{shortAddress(decision.by)}</span>.
       </p>
+      {(decision.buyerFraud || decision.sellerFraud) && (
+        <p className="rounded-xl bg-[#fff4d6] p-2 text-xs text-[var(--warn)]">
+          {tr('Cờ gian lận chỉ được tính là đã xác nhận khi đây là phán quyết cuối cùng.', 'A fraud flag only counts as confirmed once this is the final ruling.')}
+        </p>
+      )}
       <p className="whitespace-pre-wrap break-words rounded-xl bg-[var(--surface-muted)] p-3 text-sm text-[var(--ink-2)]">
         {reason ?? <span className="mono text-xs text-[var(--subtle)]">{tr('Lý do (chỉ có mã băm):', 'Reason (hash only):')} {decision.reasonHash}</span>}
       </p>
+      <p className="mono break-all text-[10px] text-[var(--subtle)]">{tr('Gốc bằng chứng', 'Evidence root')} {decision.evidenceRoot}</p>
     </div>
   )
 }

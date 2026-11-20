@@ -9,29 +9,30 @@ interface RulingRow {
   prelim_by: string | null
   prelim_at: number | null
   appeal_deadline: number | null
-  prelim_refund: string | null
-  prelim_fault: number | null
-  prelim_penalty: string | null
-  prelim_reason: string | null
+  prelim_json: string | null
   appealed_by: string | null
   appealed_at: number | null
   appeal_reason: string | null
   final_by: string | null
-  final_refund: string | null
-  final_fault: number | null
-  final_penalty: string | null
-  final_reason: string | null
+  final_json: string | null
   finalized_at: number | null
   finalized_by_appeal: number | null
 }
 
-export interface RulingDecision {
-  by: string
+/** Everything the Arbiter or Appeal Reviewer sets in one ruling (spec F16 and F18). Amounts are USDC base units as strings. */
+export interface RulingFields {
   buyerPriceRefund: string
-  fault: 0 | 1 | 2
-  penalty: string
+  buyerDepositRefund: string
+  sellerDepositRefund: string
+  buyerAtFault: boolean
+  sellerAtFault: boolean
+  buyerFraud: boolean
+  sellerFraud: boolean
   reasonHash: string
+  evidenceRoot: string
 }
+
+export type RulingDecision = RulingFields & { by: string }
 
 export interface RulingView {
   /** Plain-text reasons keyed by the hash that was sent onchain. Only parties and admins ever receive this. */
@@ -44,13 +45,15 @@ export interface RulingView {
 /** Ruling projection for one escrow, or null before any ruling. */
 export async function rulingFor(onChainId: string): Promise<RulingView | null> {
   const r = await dbGet<RulingRow>(
-    'SELECT * FROM rulings WHERE chain_id = ? AND contract = ? AND on_chain_id = ?',
+    'SELECT * FROM ruling_decisions WHERE chain_id = ? AND contract = ? AND on_chain_id = ?',
     env.chainId,
     env.escrow,
     onChainId,
   )
-  if (!r || r.prelim_by === null) return null
-  const hashes = [r.prelim_reason, r.appeal_reason, r.final_reason].filter((h): h is string => Boolean(h))
+  if (!r || r.prelim_by === null || r.prelim_json === null) return null
+  const prelim = JSON.parse(r.prelim_json) as RulingFields
+  const final = r.final_json ? (JSON.parse(r.final_json) as RulingFields) : null
+  const hashes = [prelim.reasonHash, r.appeal_reason, final?.reasonHash].filter((h): h is string => Boolean(h))
   const notes: Record<string, string> = {}
   for (const h of hashes) {
     const n = await dbGet<{ text: string }>('SELECT text FROM case_notes WHERE hash = ?', h)
@@ -58,27 +61,11 @@ export async function rulingFor(onChainId: string): Promise<RulingView | null> {
   }
   return {
     notes,
-    prelim: {
-      by: r.prelim_by,
-      at: r.prelim_at ?? 0,
-      appealDeadline: r.appeal_deadline ?? 0,
-      buyerPriceRefund: r.prelim_refund ?? '0',
-      fault: (r.prelim_fault ?? 0) as 0 | 1 | 2,
-      penalty: r.prelim_penalty ?? '0',
-      reasonHash: r.prelim_reason ?? '',
-    },
+    prelim: { ...prelim, by: r.prelim_by, at: r.prelim_at ?? 0, appealDeadline: r.appeal_deadline ?? 0 },
     appeal: r.appealed_by ? { by: r.appealed_by, at: r.appealed_at ?? 0, reasonHash: r.appeal_reason ?? '' } : null,
     final:
-      r.finalized_at !== null && r.final_by
-        ? {
-            by: r.final_by,
-            at: r.finalized_at,
-            byAppeal: r.finalized_by_appeal === 1,
-            buyerPriceRefund: r.final_refund ?? '0',
-            fault: (r.final_fault ?? 0) as 0 | 1 | 2,
-            penalty: r.final_penalty ?? '0',
-            reasonHash: r.final_reason ?? '',
-          }
+      r.finalized_at !== null && r.final_by && final
+        ? { ...final, by: r.final_by, at: r.finalized_at, byAppeal: r.finalized_by_appeal === 1 }
         : null,
   }
 }

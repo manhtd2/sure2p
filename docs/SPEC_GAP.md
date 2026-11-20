@@ -1,6 +1,6 @@
 # sure2p: đối chiếu đặc tả 10 phần với bản đang chạy
 
-Ngày: 2026-11-20. Đối chiếu dựa trên mã nguồn và hợp đồng đang có trong kho, không dựa trên trí nhớ. Cập nhật 2026-11-20 (cuối ngày): đã xây 14 trang công khai, 22 bài tài liệu, trang Tin cậy và Trạng thái (số liệu đọc trực tiếp). Hợp đồng V3 và các trang quản trị chưa làm.
+Ngày: 2026-11-20. Đối chiếu dựa trên mã nguồn và hợp đồng đang có trong kho, không dựa trên trí nhớ. Cập nhật 2026-11-20 (cuối ngày): đã xây 14 trang công khai, 22 bài tài liệu, trang Tin cậy và Trạng thái (số liệu đọc trực tiếp). Hợp đồng V3 đã deploy (xem `docs/DECISIONS.md`); các trang quản trị tách riêng, trang tài khoản và luồng cấm chưa làm.
 
 Ký hiệu: ĐÃ CÓ (khớp đặc tả), MỘT PHẦN (có nhưng thiếu), CHƯA CÓ, LỆCH (làm khác đặc tả), CHẶN (cần quyết định của chủ dự án).
 

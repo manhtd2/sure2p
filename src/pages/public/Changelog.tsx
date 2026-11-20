@@ -11,6 +11,7 @@ interface Entry {
 }
 
 const ENTRIES: Entry[] = [
+  { date: '2026-11-20', area: 'Hợp đồng', kind: 'Thay đổi', title: 'Hợp đồng ký quỹ bản 3: phán quyết theo từng bên (hoàn cọc riêng, cờ lỗi và gian lận cho mỗi bên), gắn với mã băm thỏa thuận và gốc bằng chứng', impact: 'Địa chỉ mới ở trang Tin cậy. Bản 2 không có giao dịch nào nên không có gì bị kẹt.', state: 'released' },
   { date: '2026-11-20', area: 'Công khai', kind: 'Thêm mới', title: 'Trang Tin cậy, Trạng thái, tài liệu, chính sách, hỏi đáp và liên hệ', impact: 'Mọi số liệu trên chuỗi đọc trực tiếp; không đọc được thì ghi Chưa rõ.', state: 'repo' },
   { date: '2026-11-19', area: 'Giao dịch', kind: 'Thêm mới', title: 'Người mua đính kèm tệp mô tả hàng, khóa theo chữ ký', impact: 'Mã băm tệp nằm trong thỏa thuận hai bên ký.', state: 'repo' },
   { date: '2026-11-19', area: 'Giao dịch', kind: 'Thêm mới', title: 'Xóa bản nháp chưa có đối tác; claim tiền phạt cho ví phạt', impact: 'Người tạo xóa được bản nháp khi chưa ai tham gia.', state: 'repo' },

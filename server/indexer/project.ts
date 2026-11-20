@@ -117,26 +117,21 @@ export async function applyEvent(ev: StoredEvent): Promise<void> {
       return
     case 'PreliminaryRulingIssued':
       await dbRun(
-        `INSERT INTO rulings (chain_id, contract, on_chain_id, prelim_by, prelim_at, appeal_deadline, prelim_refund,
-           prelim_fault, prelim_penalty, prelim_reason)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO ruling_decisions (chain_id, contract, on_chain_id, prelim_by, prelim_at, appeal_deadline, prelim_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(chain_id, contract, on_chain_id) DO UPDATE SET prelim_by = excluded.prelim_by,
-           prelim_at = excluded.prelim_at, appeal_deadline = excluded.appeal_deadline, prelim_refund = excluded.prelim_refund,
-           prelim_fault = excluded.prelim_fault, prelim_penalty = excluded.prelim_penalty, prelim_reason = excluded.prelim_reason`,
+           prelim_at = excluded.prelim_at, appeal_deadline = excluded.appeal_deadline, prelim_json = excluded.prelim_json`,
         ...key,
         ev.args.issuedBy,
         ev.blockTimestamp,
         Number(ev.args.appealDeadline),
-        ev.args.buyerPriceRefund,
-        Number(ev.args.fault),
-        ev.args.penalty,
-        ev.args.reasonHash,
+        decisionJson(ev.args),
       )
       await update(key, "stage = 'preliminary_ruling'")
       return
     case 'RulingAppealed':
       await dbRun(
-        `UPDATE rulings SET appealed_by = ?, appealed_at = ?, appeal_reason = ? WHERE chain_id = ? AND contract = ? AND on_chain_id = ?`,
+        `UPDATE ruling_decisions SET appealed_by = ?, appealed_at = ?, appeal_reason = ? WHERE chain_id = ? AND contract = ? AND on_chain_id = ?`,
         ev.args.by,
         ev.blockTimestamp,
         ev.args.reasonHash,
@@ -146,23 +141,18 @@ export async function applyEvent(ev: StoredEvent): Promise<void> {
       return
     case 'FinalRulingIssued':
       await dbRun(
-        `UPDATE rulings SET final_by = ?, final_refund = ?, final_fault = ?, final_penalty = ?, final_reason = ?
-         WHERE chain_id = ? AND contract = ? AND on_chain_id = ?`,
+        `UPDATE ruling_decisions SET final_by = ?, final_json = ? WHERE chain_id = ? AND contract = ? AND on_chain_id = ?`,
         ev.args.issuedBy,
-        ev.args.buyerPriceRefund,
-        Number(ev.args.fault),
-        ev.args.penalty,
-        ev.args.reasonHash,
+        decisionJson(ev.args),
         ...key,
       )
       return
     case 'RulingFinalized': {
       const byAppeal = ev.args.byAppeal === 'true' ? 1 : 0
+      // Without an appeal the preliminary ruling is the effective one.
       await dbRun(
-        `UPDATE rulings SET finalized_at = ?, finalized_by_appeal = ?,
-           final_by = COALESCE(final_by, prelim_by), final_refund = COALESCE(final_refund, prelim_refund),
-           final_fault = COALESCE(final_fault, prelim_fault), final_penalty = COALESCE(final_penalty, prelim_penalty),
-           final_reason = COALESCE(final_reason, prelim_reason)
+        `UPDATE ruling_decisions SET finalized_at = ?, finalized_by_appeal = ?,
+           final_by = COALESCE(final_by, prelim_by), final_json = COALESCE(final_json, prelim_json)
          WHERE chain_id = ? AND contract = ? AND on_chain_id = ?`,
         ev.blockTimestamp,
         byAppeal,
@@ -176,6 +166,21 @@ export async function applyEvent(ev: StoredEvent): Promise<void> {
   }
 }
 
+/** The ruling fields shared by the preliminary and final events, stored as JSON. Booleans arrive as 'true'/'false'. */
+function decisionJson(args: Record<string, string>): string {
+  return JSON.stringify({
+    buyerPriceRefund: args.buyerPriceRefund,
+    buyerDepositRefund: args.buyerDepositRefund,
+    sellerDepositRefund: args.sellerDepositRefund,
+    buyerAtFault: args.buyerAtFault === 'true',
+    sellerAtFault: args.sellerAtFault === 'true',
+    buyerFraud: args.buyerFraud === 'true',
+    sellerFraud: args.sellerFraud === 'true',
+    reasonHash: args.reasonHash,
+    evidenceRoot: args.evidenceRoot,
+  })
+}
+
 async function update(key: readonly [number, string, string], set: string, ...values: Array<string | number>): Promise<void> {
   await dbRun(`UPDATE escrows SET ${set} WHERE chain_id = ? AND contract = ? AND on_chain_id = ?`, ...values, ...key)
 }
@@ -183,7 +188,7 @@ async function update(key: readonly [number, string, string], set: string, ...va
 /** Reset all projected state, then replay every stored event in chain order. */
 export async function rebuildProjections(): Promise<void> {
   await dbTx(async () => {
-    await dbRun('DELETE FROM rulings')
+    await dbRun('DELETE FROM ruling_decisions')
     await dbRun(
       `UPDATE escrows SET orphaned = 1, stage = 'funding', buyer_funded = 0, seller_funded = 0, activated_at = NULL,
          seller_declared_at = NULL, handover_manifest = NULL, buyer_acknowledged_at = NULL, buyer_accepted_at = NULL,

@@ -85,9 +85,14 @@ export interface EscrowView {
 export interface RulingDecisionView {
   by: string
   buyerPriceRefund: string
-  fault: 0 | 1 | 2
-  penalty: string
+  buyerDepositRefund: string
+  sellerDepositRefund: string
+  buyerAtFault: boolean
+  sellerAtFault: boolean
+  buyerFraud: boolean
+  sellerFraud: boolean
   reasonHash: string
+  evidenceRoot: string
 }
 
 export interface RulingView {

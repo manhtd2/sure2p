@@ -8,11 +8,12 @@ This is the **project memory** - what Arc Studio remembers about building this a
 
 ## What This App Does
 
-P2P trade-assurance escrow on Arc Testnet for digital goods. Buyer escrows 100% of the price plus a 25% deposit, Seller escrows a separate 25% deposit; delivery happens outside the app; release needs both confirmations or a dual-signed mutual settlement. Locked deals exit through a dual-signed mutual settlement or an Arbiter ruling with one 72 hour appeal and deposit penalties (escrow V2), with evidence upload and an admin console at `/admin`. Notifications and the AI Copilot are deferred (see `docs/DECISIONS.md`).
+P2P trade-assurance escrow on Arc Testnet for digital goods. Buyer escrows 100% of the price plus a 25% deposit, Seller escrows a separate 25% deposit; delivery happens outside the app; release needs both confirmations or a dual-signed mutual settlement. Locked deals exit through a dual-signed mutual settlement or an Arbiter ruling with one 72 hour appeal and per-party deposit penalties and fraud flags (escrow V3), with evidence upload and an admin console at `/admin`. Notifications and the AI Copilot are deferred (see `docs/DECISIONS.md`).
 
 ## Deployed contracts (Arc Testnet)
 
-- Sure2PEscrowV2 (current, used by the app): `0xbac54f5f54516007b5db955ee45433920893d94a` (tx `0x3da72eb58a398e576a02a4f8d6635998ee346c59b6c30ece9d15f49eaddccb08`). Owner and penalty wallet `0xEb8d...7253e`, arbiter `0x3026...FEB6`, appeal reviewer `0x835E...A88E`. Penalty wallet is immutable.
+- Sure2PEscrowV3 (current, used by the app): `0xab91b5239f65d9f125d0a1d5d93350f257dba33c` (tx `0xffb3b587a9249b2110015072273202e57254a7102902794147c96a7dedf6141e`). Owner and penalty wallet `0xEb8d...7253e`, arbiter `0x3026...FEB6`, appeal reviewer `0x835E...A88E`. Penalty wallet is immutable.
+- Sure2PEscrowV2 (retired from the app, no escrows, no funds): `0xbac54f5f54516007b5db955ee45433920893d94a` (tx `0x3da72eb58a398e576a02a4f8d6635998ee346c59b6c30ece9d15f49eaddccb08`)
 - Sure2PEscrow (V1, retired from the app, still on chain with 3 test escrows): `0xcdaf4bc89d9e44eac1c36d9ee01724e5e51d90b9` (tx `0x422002da4274996918369fd3758a929b0ff98607cadab927453fd78e6261bf11`)
 - Sure2PAccountRegistry: `0xfa6a19d4597a55f1f64003fb28fba199f8bafacd` (tx `0xf367e3c8a152940ac66fd1dd4dd309e7bba6cc08b026fd49e75187f129f23399`)
 - Registry roles currently belong to the Arc Studio platform deployer wallet; hand them to an operator wallet before real use.
