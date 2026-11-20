@@ -1,10 +1,9 @@
-import { getAddress, keccak256, toBytes, type Address } from 'viem'
+import { getAddress, type Address } from 'viem'
 import { dbAll, dbGet } from '../db.js'
 import { env } from '../env.js'
 import { HttpError, notFound, requireWallet, type Ctx } from '../http.js'
 import { publicClient } from '../indexer/index.js'
 import { escrowAbi } from '../../src/shared/escrowAbi.js'
-import { registryAbi } from '../../src/shared/registryAbi.js'
 
 interface RulingRow {
   prelim_by: string | null
@@ -114,17 +113,18 @@ export async function anchoredHashes(onChainId: string): Promise<Map<string, { t
 
 export type AdminRole = 'arbiter' | 'reviewer'
 
-let roleCache: { at: number; arbiter: Address; reviewer: Address; penaltyWallet: Address } | null = null
+let roleCache: { at: number; owner: Address; arbiter: Address; reviewer: Address; penaltyWallet: Address } | null = null
 
 /** Current onchain ruling roles. Cached briefly: the chain stays the source of truth. */
-export async function chainRoles(): Promise<{ arbiter: Address; reviewer: Address; penaltyWallet: Address }> {
+export async function chainRoles(): Promise<{ owner: Address; arbiter: Address; reviewer: Address; penaltyWallet: Address }> {
   if (roleCache && Date.now() - roleCache.at < 15_000) return roleCache
-  const [arbiter, reviewer, penaltyWallet] = await Promise.all([
+  const [owner, arbiter, reviewer, penaltyWallet] = await Promise.all([
+    publicClient.readContract({ address: env.escrow, abi: escrowAbi, functionName: 'owner' }),
     publicClient.readContract({ address: env.escrow, abi: escrowAbi, functionName: 'arbiter' }),
     publicClient.readContract({ address: env.escrow, abi: escrowAbi, functionName: 'appealReviewer' }),
     publicClient.readContract({ address: env.escrow, abi: escrowAbi, functionName: 'penaltyWallet' }),
   ])
-  roleCache = { at: Date.now(), arbiter: getAddress(arbiter), reviewer: getAddress(reviewer), penaltyWallet: getAddress(penaltyWallet) }
+  roleCache = { at: Date.now(), owner: getAddress(owner), arbiter: getAddress(arbiter), reviewer: getAddress(reviewer), penaltyWallet: getAddress(penaltyWallet) }
   return roleCache
 }
 
@@ -153,24 +153,18 @@ export async function isPenaltyWallet(wallet: string | null): Promise<boolean> {
   return getAddress(wallet) === roles.penaltyWallet
 }
 
-const SECURITY_ROLE = keccak256(toBytes('SECURITY_ROLE'))
-
-/** True when the wallet holds the registry's SECURITY_ROLE onchain. This role alone may ban accounts. */
+/**
+ * Security admin for the APP-LEVEL account ban: the escrow contract's owner wallet (decision 2026-11-20, option 3).
+ * The registry's own SECURITY_ROLE sits with a shared platform wallet and is not used here, so this never writes to
+ * the registry. The ban only stops new deals for an account; it needs a final ruling that names fraud.
+ */
 export async function isSecurityAdmin(wallet: string | null): Promise<boolean> {
   if (!wallet) return false
-  try {
-    return await publicClient.readContract({
-      address: env.registry,
-      abi: registryAbi,
-      functionName: 'hasRole',
-      args: [SECURITY_ROLE, getAddress(wallet)],
-    })
-  } catch {
-    return false
-  }
+  const roles = await chainRoles().catch(() => null)
+  return roles ? getAddress(wallet) === roles.owner : false
 }
 
-/** Console access for the three kinds of operator: arbiter, appeal reviewer, or registry security admin. */
+/** Console access for the three kinds of operator: arbiter, appeal reviewer, or the security admin (the contract owner). */
 export async function requireOperator(ctx: Ctx): Promise<{ wallet: Address; role: AdminRole | null; security: boolean }> {
   const s = requireWallet(ctx)
   const [role, security] = await Promise.all([adminRoleOf(s.wallet), isSecurityAdmin(s.wallet)])

@@ -99,6 +99,7 @@ export const docsB: Doc[] = [
         'Chủ hợp đồng chỉ thay được người giữ vai trò phán quyết và xem xét, không chạm vào tiền.',
       ] },
       { p: 'Cấm tài khoản chỉ sau phán quyết cuối xác nhận gian lận, và chỉ chặn mở giao dịch mới. Không đóng băng hay tịch thu ví bên ngoài; khoản nhận hợp lệ của giao dịch cũ vẫn nhận được.' },
+      { p: 'Trong bản hiện tại, lệnh cấm do ví owner của hợp đồng thi hành và chỉ nằm trong ứng dụng: nó chặn tài khoản mở hoặc tham gia giao dịch mới. Lệnh cấm không được ghi vào sổ đăng ký trên chuỗi, vì vai trò bảo mật của sổ đăng ký đang do một ví chung của nền tảng giữ. Hợp đồng ghi cờ gian lận của phán quyết cuối để mọi người kiểm chứng được.' },
       { warn: 'Hợp đồng đã được rà soát nội bộ và có 519 ca kiểm thử, nhưng chưa có kiểm toán độc lập. Xem trang Tin cậy để biết trạng thái.' },
     ],
   },

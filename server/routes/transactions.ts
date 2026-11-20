@@ -2,7 +2,7 @@ import { getAddress, type Address } from 'viem'
 import { dbAll, dbGet, dbRun, nowSec } from '../db.js'
 import { env } from '../env.js'
 import { HttpError, notFound, requireSession, route, type Ctx } from '../http.js'
-import { indexerStatus, publicClient } from '../indexer/index.js'
+import { indexerStatus, publicClient, reconcile } from '../indexer/index.js'
 import { escrowAbi } from '../../src/shared/escrowAbi.js'
 import { isPublicId, overdueTriggerAt, type EscrowStage } from '../../src/shared/protocol.js'
 import { parseTerms, type DraftRow, type VersionRow } from '../lib/deals.js'
@@ -249,7 +249,10 @@ route('GET', '/transactions/:publicId/tx', async (ctx) => {
   return txStatus(ctx, txHash)
 })
 
-route('GET', '/health', () => {
+route('GET', '/health', async () => {
+  // On Vercel there is no background loop that reconciles, so refresh a stale reading here (two cheap reads).
+  const before = indexerStatus().reconciliation
+  if (!before || Date.now() - before.at > 30_000) await reconcile().catch(() => undefined)
   const s = indexerStatus()
   return {
     ok: s.lastError === null,

@@ -1,5 +1,7 @@
 # Security and trust model
 
+> Account bans (decided 2026-11-20): executed by the escrow owner wallet, app-level only, never written to the registry. See `docs/DECISIONS.md`.
+
 ## Trust disclosure
 
 The escrow reduces payment and counterparty risk by locking funds in a contract. It does not prove that goods are genuine and it is not trustless dispute resolution. A locked deal is released by both parties signing a settlement, or by a human Arbiter ruling (one 72 hour appeal to a different Appeal Reviewer). Rulings and penalties are human decisions and can be wrong.

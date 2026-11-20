@@ -42,7 +42,7 @@ export default function AdminSettings() {
       <section className="card space-y-2 p-5 text-sm text-[var(--ink-2)]">
         <h2 className="display text-lg font-bold">{tr('Cách đổi vai trò', 'How to change a role')}</h2>
         <p>{tr('Owner gọi setArbiter hoặc setAppealReviewer từ ví của owner, bên ngoài màn hình này. Owner không thể phán quyết hay chuyển tiền. Chuyển quyền owner qua hai bước (transferOwnership rồi acceptOwnership), có thể sang ví Safe nhiều chữ ký.', 'The owner calls setArbiter or setAppealReviewer from the owner wallet, outside this screen. The owner cannot rule or move funds. Ownership moves in two steps (transferOwnership then acceptOwnership) and may go to a multisig Safe.')}</p>
-        <p>{tr('Vai trò quản trị bảo mật (cấm ví) nằm trong sổ đăng ký, do người giữ SECURITY_ROLE quản lý.', 'The security admin role (wallet bans) lives in the registry and is managed by the SECURITY_ROLE holder.')}</p>
+        <p>{tr('Quản trị bảo mật (cấm tài khoản mở giao dịch mới) là ví owner của hợp đồng. Lệnh cấm chỉ nằm trong ứng dụng và không được ghi vào sổ đăng ký trên chuỗi: vai trò bảo mật của sổ đăng ký đang do một ví chung của nền tảng giữ.', 'The security admin (bans an account from new deals) is the contract owner wallet. A ban lives only in the app and is not written to the onchain registry: the registry security role is held by a shared platform wallet.')}</p>
       </section>
     </div>
   )

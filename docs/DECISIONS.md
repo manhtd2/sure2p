@@ -88,3 +88,10 @@ Nothing below has been decided; no value has been invented. See `docs/SPEC_GAP.m
 - Ban rules: only the registry SECURITY_ROLE holder may act; the contract's `fraudConfirmed` must name that side from a final ruling; the app-level ban sets the account status to banned (blocks new deals only). The wallet-level ban is a separate `setBanned` transaction from the security admin's own wallet.
 - BLOCKER (needs the owner): on the current registry, SECURITY_ROLE and DEFAULT_ADMIN_ROLE are held by the shared platform deployer wallet `0x5B12...Ef42`, and the owner wallet holds neither (read from the chain). Nobody on the owner's side can ban or move the role, and the registry is immutable inside V3. Options: (a) deploy a new registry owned by the owner plus a new escrow (V4) that points to it, (b) accept that bans are unusable on this deployment, (c) let the owner wallet act as security admin for the app-level ban only (a design change). Not decided.
 - Found while testing the live deploy: the draft page never triggered the lazy indexer, so a new escrow's public ID could stay missing on Vercel until another page was opened. Fixed in `server/http.ts`; needs a redeploy.
+
+## Security admin = owner wallet (decided 2026-11-20, option 3)
+
+- The app-level account ban is executed by the escrow contract's `owner()` wallet (read from the chain). It sets `accounts.status = 'banned'`, which blocks starting or joining new deals (HTTP 403 `account_restricted`), and nothing else: reads and claims still work.
+- A ban needs the contract's `fraudConfirmed(id)` to name that side, which only a final ruling can do.
+- Nothing is written to the registry. The registry SECURITY_ROLE stays with the shared platform wallet and is not used. This is a deliberate deviation from the spec (security admin separate from the owner, wallet-level ban). Concentration of power: the owner can already replace the arbiter and reviewer, and now also bans accounts after a final ruling.
+- To reach the spec fully later: deploy a registry owned by the project wallet and redeploy the V3 bytecode pointing to it (option 1).

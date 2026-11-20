@@ -316,13 +316,13 @@ route('GET', '/admin/accounts', async (ctx) => {
 const banSchema = z.object({ publicId: z.string().length(12), side: z.enum(['buyer', 'seller']) })
 
 /**
- * POST /admin/accounts?action=ban|unban. Security admin only (registry SECURITY_ROLE). A ban needs the contract's
+ * POST /admin/accounts?action=ban|unban. Security admin only (the contract owner wallet; app-level ban, never written to the registry). A ban needs the contract's
  * own `fraudConfirmed` to name that side; it only stops the account opening or joining NEW deals. Existing
  * deals and claims are untouched. The wallet-level ban in the registry is sent from the admin's own wallet.
  */
 route('POST', '/admin/accounts', async (ctx) => {
   const op = await requireOperator(ctx)
-  if (!op.security) throw new HttpError(403, 'security_role_required', 'Only the registry security admin can change account bans')
+  if (!op.security) throw new HttpError(403, 'security_role_required', 'Only the security admin (the contract owner) can change account bans')
   const action = ctx.url.searchParams.get('action')
   if (action !== 'ban' && action !== 'unban') throw notFound()
   rateLimit(`admin-ban:${op.wallet}`, 20, 600)

@@ -1,13 +1,9 @@
 import { useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useWriteContract } from 'wagmi'
 import { useLang } from '@/i18n'
 import { api, errorText } from '@/lib/api'
-import { CHAIN_ID } from '@/lib/contracts'
 import { shortAddress } from '@/lib/format'
-import { registryAbi } from '@/shared/registryAbi'
-import { ChainAction } from '@/components/ChainAction'
 import { Loader } from '@/components/Loader'
 import type { AdminMe } from '../Admin'
 
@@ -20,17 +16,15 @@ interface Item {
   registryBanned: boolean
 }
 
-const REGISTRY = (import.meta.env.VITE_ACCOUNT_REGISTRY_ADDRESS ?? '') as `0x${string}`
-
 /**
- * Account bans. Only wallets the CONTRACT names as fraudulent in a FINAL ruling appear here, and only the registry
- * security admin can act. A ban stops new deals; it never freezes a wallet or touches existing deals and claims.
+ * Account bans. Only wallets the CONTRACT names as fraudulent in a FINAL ruling appear here, and only the security
+ * admin (the contract owner wallet) can act. The ban is app-level: it stops new deals for the account, never freezes a
+ * wallet, never touches existing deals or claims, and is not written to the registry.
  */
 export default function AdminAccounts() {
   const { tr } = useLang()
   const me = useOutletContext<AdminMe>()
   const qc = useQueryClient()
-  const { writeContractAsync } = useWriteContract()
   const [error, setError] = useState<string | null>(null)
   const q = useQuery({ queryKey: ['admin-accounts'], queryFn: () => api<{ security: boolean; items: Item[] }>('/admin/accounts'), refetchInterval: 15_000 })
   if (q.isLoading || !q.data) return <Loader />
@@ -55,7 +49,7 @@ export default function AdminAccounts() {
       </p>
       {!me.security && (
         <p className="rounded-xl bg-[#fff4d6] p-3 text-sm text-[var(--warn)]">
-          {tr('Ví của bạn không giữ SECURITY_ROLE của sổ đăng ký nên chỉ xem được. Chỉ quản trị bảo mật mới cấm hoặc bỏ cấm.', 'Your wallet does not hold the registry SECURITY_ROLE, so this page is read-only. Only the security admin can ban or unban.')}
+          {tr('Chỉ ví owner của hợp đồng (quản trị bảo mật) mới cấm hoặc bỏ cấm được. Ví của bạn chỉ xem.', 'Only the contract owner wallet (the security admin) can ban or unban. Your wallet is read-only.')}
         </p>
       )}
       {error && <p className="text-sm text-[var(--danger)]" role="alert">{error}</p>}
@@ -72,21 +66,16 @@ export default function AdminAccounts() {
                 </div>
                 <div className="flex gap-2">
                   <span className="chip">{tr('Tài khoản', 'Account')}: {i.accountStatus ?? '—'}</span>
-                  <span className="chip">{tr('Sổ đăng ký', 'Registry')}: {i.registryBanned ? tr('đã cấm ví', 'wallet banned') : tr('chưa cấm', 'not banned')}</span>
+                  <span className="chip">{tr('Sổ đăng ký (chỉ đọc)', 'Registry (read only)')}: {i.registryBanned ? tr('đã cấm ví', 'wallet banned') : tr('chưa cấm', 'not banned')}</span>
                 </div>
               </div>
               {me.security && (
                 <div className="flex flex-wrap gap-2">
                   {i.accountStatus !== 'banned' ? (
-                    <button type="button" className="btn btn-danger" onClick={() => void setStatus(i, 'ban')}>{tr('Cấm mở giao dịch mới (tài khoản)', 'Ban new deals (account)')}</button>
+                    <button type="button" className="btn btn-danger" onClick={() => void setStatus(i, 'ban')}>{tr('Cấm mở giao dịch mới', 'Ban new deals')}</button>
                   ) : (
                     <button type="button" className="btn btn-ghost" onClick={() => void setStatus(i, 'unban')}>{tr('Bỏ cấm tài khoản', 'Lift account ban')}</button>
                   )}
-                  <ChainAction
-                    label={i.registryBanned ? tr('Bỏ cấm ví trong sổ đăng ký', 'Unban wallet in registry') : tr('Ghi cấm ví vào sổ đăng ký', 'Ban wallet in registry')}
-                    send={() => writeContractAsync({ address: REGISTRY, abi: registryAbi, functionName: 'setBanned', args: [i.wallet as `0x${string}`, !i.registryBanned], chainId: CHAIN_ID })}
-                    onDone={refresh}
-                  />
                 </div>
               )}
             </li>
