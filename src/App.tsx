@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { LangProvider } from '@/i18n'
 import { Layout } from '@/components/Layout'
+import { PublicLayout } from '@/components/PublicLayout'
 import { RequireAuth } from '@/components/RequireAuth'
 import Landing from '@/pages/Landing'
 import SignIn from '@/pages/SignIn'
@@ -9,14 +10,38 @@ import NewTransaction from '@/pages/NewTransaction'
 import Join from '@/pages/Join'
 import TransactionDetail from '@/pages/TransactionDetail'
 import Admin from '@/pages/Admin'
+import HowItWorks from '@/pages/public/HowItWorks'
+import Trust from '@/pages/public/Trust'
+import Status from '@/pages/public/Status'
+import Docs from '@/pages/public/Docs'
+import Faq from '@/pages/public/Faq'
+import Changelog from '@/pages/public/Changelog'
+import Contact from '@/pages/public/Contact'
+import Policy from '@/pages/public/Policy'
 
 export default function App() {
   return (
     <LangProvider>
       <BrowserRouter>
         <Routes>
-          <Route element={<Layout />}>
+          <Route element={<PublicLayout />}>
             <Route index element={<Landing />} />
+            <Route path="how-it-works" element={<HowItWorks />} />
+            <Route path="trust" element={<Trust />} />
+            <Route path="status" element={<Status />} />
+            <Route path="docs/*" element={<Docs />} />
+            <Route path="faq" element={<Faq />} />
+            <Route path="changelog" element={<Changelog />} />
+            <Route path="contact" element={<Contact />} />
+            <Route path="security" element={<Policy id="security" />} />
+            <Route path="privacy" element={<Policy id="privacy" />} />
+            <Route path="terms" element={<Policy id="terms" />} />
+            <Route path="risk-disclosure" element={<Policy id="risk-disclosure" />} />
+            <Route path="dispute-policy" element={<Policy id="dispute-policy" />} />
+            <Route path="evidence-policy" element={<Policy id="evidence-policy" />} />
+            <Route path="fees" element={<Policy id="fees" />} />
+          </Route>
+          <Route element={<Layout />}>
             <Route path="sign-in" element={<SignIn />} />
             <Route path="join" element={<Join />} />
             <Route path="transactions" element={<RequireAuth><Transactions /></RequireAuth>} />

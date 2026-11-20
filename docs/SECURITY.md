@@ -24,7 +24,7 @@ The escrow reduces payment and counterparty risk by locking funds in a contract.
 - The Arbiter, Appeal Reviewer and owner are single wallets. Colluding role holders could misallocate funds of locked escrows. Use multisigs beyond testnet.
 - The owner and penalty wallet are the same address by choice. The owner cannot rule or move funds.
 - Description files are stored in the same database. The file hash is signed, so a changed file is detectable, but if the stored bytes are lost the original cannot be recovered; keep your own copy.
-- Office files can contain macros or links. Macro-enabled formats are refused, and downloads are served as attachments with a sandboxing policy, but users should only open files from sources they trust.
+- Office files can contain macros or links. Macro-enabled formats (xlsm, docm) are refused, but legacy xls and doc files can still carry macros, and downloads are served as attachments with a sandboxing policy, but users should only open files from sources they trust.
 - Evidence files are stored in the application database and are only as available as the server. Anchored hashes prove a file existed at that time, not that its contents are true.
 - Admin sign-in uses the same mock phone code as everyone else, then checks the wallet against the onchain roles. Replace the mock code before real use.
 - If the USDC issuer blocklists the escrow address, every claim fails. This is a property of the asset.

@@ -17,6 +17,7 @@ import './routes/transactions.js'
 import './routes/settlements.js'
 import './routes/evidence.js'
 import './routes/admin.js'
+import './routes/public.js'
 import { startIndexer } from './indexer/index.js'
 
 if (typeof Bun === 'undefined') {

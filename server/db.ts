@@ -262,6 +262,16 @@ CREATE TABLE IF NOT EXISTS case_notes (
   created_at INTEGER NOT NULL
 );
 
+-- Messages from the public contact form. No automatic reply channel exists yet (decision D01/D04 open).
+CREATE TABLE IF NOT EXISTS support_requests (
+  id TEXT PRIMARY KEY,
+  topic TEXT NOT NULL,
+  message TEXT NOT NULL,
+  email TEXT,
+  public_id TEXT,
+  created_at INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS indexer_state (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL

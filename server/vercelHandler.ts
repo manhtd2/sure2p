@@ -25,6 +25,7 @@ import './routes/transactions.js'
 import './routes/settlements.js'
 import './routes/evidence.js'
 import './routes/admin.js'
+import './routes/public.js'
 import { handle } from './http.js'
 
 export const config = {

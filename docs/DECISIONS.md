@@ -39,3 +39,22 @@ Recorded where the build made a choice, filled a gap, or deviates from the produ
 ## Not verified
 
 - The browser UI has not been exercised by a human with a wallet in the preview. It compiles, passes lint and typecheck, and its API and contract flow is covered by the end-to-end script that drives the same endpoints and contract calls.
+
+## Open questions from the 10-part spec (2026-11-20)
+
+Nothing below has been decided; no value has been invented. See `docs/SPEC_GAP.md` for the full gap list.
+
+- Contract: the spec's two-sided deposit refund and fraud flags need a new escrow contract at a new address (V2 stays as deployed). Waiting for owner approval before any build or deploy.
+- Owner and penalty wallet are the same address by explicit owner choice; the spec asks for four distinct addresses (D05).
+- Registry role is still held by the shared platform deployer wallet; only the project owner's wallet can move it.
+- D01 to D15 are all open. Policy and legal pages will be built with blank, labelled placeholders until D01, D02, D03 and D10 are answered.
+- Evidence limits (spec: 2 MB, 25 files, PNG/JPEG/WebP/PDF/text) differ from what is live (office files allowed, 3 MB description files); pending D09.
+
+## Answers on 2026-11-20
+
+- Contract: build a V3 escrow that matches the spec (per-party deposit refunds, fraud flags), deploy at a new address on Arc Testnet, switch the app to it. V2 escrows will no longer show in the app. Not started: needs a design doc and owner confirmation first.
+- Owner and penalty wallet stay the same address (`0xEb8d...7253e`), recorded as a deliberate exception to the spec's four distinct addresses.
+- Build order: public pages first (done), then contract V3, admin split, account page.
+- Providers (D04): keep the labelled mock OTP and keep evidence in the database; the AI assistant is out of scope for this round and docs say so.
+- English translation of docs and policies is pending D10; the UI chrome is bilingual, long-form text is Vietnamese with a notice.
+- The V2 contract source is not verified on the explorer; the Trust page says so.
