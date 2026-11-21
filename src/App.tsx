@@ -11,7 +11,6 @@ import Join from '@/pages/Join'
 import TransactionDetail from '@/pages/TransactionDetail'
 import Admin, { CaseDetailPage, CasesPage } from '@/pages/Admin'
 import Notifications from '@/pages/Notifications'
-import Assistant from '@/pages/Assistant'
 import AdminOverview from '@/pages/admin/Overview'
 import AdminEscrows from '@/pages/admin/Escrows'
 import AdminAccounts from '@/pages/admin/Accounts'
@@ -58,7 +57,6 @@ export default function App() {
             <Route path="transactions/:ref" element={<RequireAuth><TransactionDetail /></RequireAuth>} />
             <Route path="account" element={<RequireAuth><Account /></RequireAuth>} />
             <Route path="notifications" element={<RequireAuth><Notifications /></RequireAuth>} />
-            <Route path="assistant" element={<RequireAuth><Assistant /></RequireAuth>} />
             <Route path="admin" element={<RequireAuth><Admin /></RequireAuth>}>
               <Route index element={<AdminOverview />} />
               <Route path="cases" element={<CasesPage />} />

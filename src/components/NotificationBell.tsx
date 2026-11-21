@@ -4,12 +4,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bell } from 'lucide-react'
 import { useLang } from '@/i18n'
 import { api } from '@/lib/api'
-import { describeNotification, type NotificationItem } from '@/lib/notifications'
+import { describeNotification, type NotificationItem, type TodoItem } from '@/lib/notifications'
 import { formatDateTime } from '@/lib/format'
 
 export interface NotificationsResponse {
   items: NotificationItem[]
   unread: number
+  todos: TodoItem[]
 }
 
 export function useNotifications(enabled: boolean) {

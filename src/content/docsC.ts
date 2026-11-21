@@ -6,10 +6,15 @@ export const docsC: Doc[] = [
     title: 'Trợ lý',
     summary: 'Trợ lý đọc giao dịch của bạn và soạn bản xem trước. Nó không ký, không gửi và không phán quyết.',
     blocks: [
-      { p: 'Trợ lý ở trang Trợ lý. Nó có 12 công cụ: 4 công cụ đọc (giao dịch của bạn, chi tiết một giao dịch, số tiền khóa và chờ nhận, trạng thái tranh chấp) và 8 công cụ chuẩn bị (thỏa thuận, lời mời, đề xuất sửa, nạp tiền, bàn giao hoặc xác nhận, thỏa thuận chung, tranh chấp hoặc kháng nghị, nhận tiền).' },
+      { p: 'Trợ lý là một khung chat nổi ở góc màn hình sau khi bạn đăng nhập. Bạn kéo thả nó tới bất cứ đâu (hoặc dùng phím mũi tên khi đang chọn thanh tiêu đề), thu nhỏ khi không cần, và nó nhớ vị trí lần sau. Nó có hai phần: Việc cần làm và Hỏi đáp.' },
+      { ul: [
+        'Việc cần làm: với mỗi giao dịch, cho biết đang tới lượt ai, việc gì, hạn chót còn bao lâu, và nút Chuẩn bị để mở bản xem trước (nạp tiền, bàn giao, xác nhận đã nhận, chấp thuận, chốt, kháng cáo, nhận tiền, mời đối tác). Số liệu tính từ trạng thái thật mỗi lần mở.',
+        'Hỏi đáp: trả lời "tôi cần làm gì tiếp", số tiền khóa và chờ nhận, hạn chót của giao dịch bạn chọn, và các câu hỏi chung bằng cách tìm trong tài liệu và hỏi đáp của sure2p. Trả lời tự do bằng mô hình chỉ có khi bản triển khai bật chat.',
+      ] },
+      { p: 'Phía sau có 12 công cụ: 4 công cụ đọc (giao dịch của bạn, chi tiết một giao dịch, số tiền khóa và chờ nhận, trạng thái tranh chấp) và 8 công cụ chuẩn bị (thỏa thuận, lời mời, đề xuất sửa, nạp tiền, bàn giao hoặc xác nhận, thỏa thuận chung, tranh chấp hoặc kháng nghị, nhận tiền). Khi chat bằng mô hình tắt, bạn dùng các nút Chuẩn bị ở Việc cần làm; soạn thỏa thuận mới, đề xuất sửa và thỏa thuận chung vẫn làm ở các trang giao dịch như bình thường.' },
       { h: 'Một công cụ chuẩn bị chạy thế nào' },
       { steps: [
-        'Bạn nhập thông tin (hoặc nói với trợ lý nếu chat đã bật). Thiếu gì thì trợ lý hỏi, không đoán.',
+        'Bạn bấm Chuẩn bị ở một bước cần làm (hoặc nói với trợ lý nếu chat bằng mô hình đang bật). Thiếu gì thì trợ lý hỏi, không đoán.',
         'Máy chủ kiểm tra lại vai trò, số tiền, trạng thái trên chuỗi, rồi lưu một bản xem trước hết hạn sau 300 giây.',
         'Bạn xem số tiền chính xác, cảnh báo và việc sắp làm. Bản xem trước chưa phải đã gửi và không phải ủy quyền.',
         'Bạn bấm Tiếp tục. Máy chủ kiểm tra lại một lần nữa; nếu trạng thái đã đổi thì bản xem trước bị coi là cũ và bạn phải chuẩn bị lại.',
@@ -22,7 +27,7 @@ export const docsC: Doc[] = [
         'Không nhận mã tài khoản hay vai trò từ câu bạn gõ: mọi thứ lấy từ phiên đăng nhập của bạn.',
         'Không xem giao dịch của người khác. Nội dung bằng chứng không được gửi cho mô hình, và nội dung trong tệp không bao giờ được coi là lệnh.',
       ] },
-      { p: 'Phần trò chuyện bằng mô hình chỉ bật khi bản triển khai có khóa nhà cung cấp mô hình; khi tắt, 12 công cụ vẫn dùng đầy đủ qua biểu mẫu. Cuộc trò chuyện không được lưu. Luồng giao dịch thủ công luôn hoạt động khi trợ lý hỏng hoặc bị giới hạn tần suất.' },
+      { p: 'Phần trò chuyện bằng mô hình chỉ bật khi bản triển khai có khóa nhà cung cấp mô hình; Cuộc trò chuyện không được lưu. Luồng giao dịch thủ công luôn hoạt động khi trợ lý hỏng hoặc bị giới hạn tần suất.' },
       { pending: 'D04', text: 'Nhà cung cấp mô hình trợ lý chính thức chưa được chọn.' },
     ],
   },

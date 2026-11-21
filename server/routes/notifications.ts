@@ -21,6 +21,18 @@ export interface NotificationItem {
   read: boolean
 }
 
+export interface TodoItem {
+  key: string
+  kind: string
+  publicId: string | null
+  draftId: string | null
+  /** Who has to act next. 'me' means you; the rest are waiting rooms you can do nothing about. */
+  waitingOn: 'me' | 'other' | 'arbiter' | 'reviewer' | 'anyone'
+  deadline: number | null
+  /** A prepare tool the assistant can open for this step, or null when the step is done in the deal page. */
+  action: { tool: string; input: Record<string, string> } | null
+}
+
 const HOUR = 3600
 const EVENT_WINDOW = 30 * 24 * HOUR
 
@@ -45,6 +57,8 @@ route('GET', '/notifications', async (ctx) => {
   const now = nowSec()
   const items: Omit<NotificationItem, 'read'>[] = []
   const add = (i: Omit<NotificationItem, 'read'>) => items.push(i)
+  const todos: TodoItem[] = []
+  const todo = (t: Omit<TodoItem, 'draftId'> & { draftId?: string | null }) => todos.push({ draftId: null, ...t })
 
   const wallets = (await dbAll<{ address: string }>('SELECT address FROM wallet_links WHERE account_id = ?', s.accountId)).map((w) =>
     w.address.toLowerCase(),
@@ -95,6 +109,36 @@ route('GET', '/notifications', async (ctx) => {
         add({ key: `${pid}:case_open:${r.stage}`, kind: 'case_open', publicId: pid, at: now, severity: 'warn', params: { stage: r.stage } })
       }
 
+      // --- next step: who has to act, from real state
+      const fundMine = (isBuyer && !r.buyer_funded) || (isSeller && !r.seller_funded)
+      const act = (tool: string, extra: Record<string, string> = {}) => ({ tool, input: { publicId: pid, ...extra } })
+      if (r.stage === 'funding') {
+        if (r.funding_deadline > now) {
+          todo(fundMine
+            ? { key: `${pid}:t:fund`, kind: 'fund', publicId: pid, waitingOn: 'me', deadline: r.funding_deadline, action: act('prepareFunding') }
+            : { key: `${pid}:t:wait_fund`, kind: 'wait_fund', publicId: pid, waitingOn: 'other', deadline: r.funding_deadline, action: null })
+        } else {
+          todo({ key: `${pid}:t:expire`, kind: 'expire', publicId: pid, waitingOn: 'anyone', deadline: null, action: null })
+        }
+      } else if (r.stage === 'active') {
+        if (isSeller) {
+          if (!r.seller_declared_at) todo({ key: `${pid}:t:handover`, kind: 'handover', publicId: pid, waitingOn: 'me', deadline: r.handover_deadline, action: act('prepareConfirmation', { kind: 'handover' }) })
+          else if (!r.buyer_acknowledged_at) todo({ key: `${pid}:t:wait_ack`, kind: 'wait_ack', publicId: pid, waitingOn: 'other', deadline: r.seller_declared_at + r.buyer_response_seconds, action: null })
+          else if (!r.buyer_accepted_at) todo({ key: `${pid}:t:wait_accept`, kind: 'wait_accept', publicId: pid, waitingOn: 'other', deadline: r.buyer_acknowledged_at + r.inspection_seconds, action: null })
+          else todo({ key: `${pid}:t:finalize`, kind: 'finalize', publicId: pid, waitingOn: 'me', deadline: null, action: act('prepareConfirmation', { kind: 'finalize' }) })
+        } else if (isBuyer) {
+          if (!r.seller_declared_at) todo({ key: `${pid}:t:wait_handover`, kind: 'wait_handover', publicId: pid, waitingOn: 'other', deadline: r.handover_deadline, action: null })
+          else if (!r.buyer_acknowledged_at) todo({ key: `${pid}:t:ack`, kind: 'ack', publicId: pid, waitingOn: 'me', deadline: r.seller_declared_at + r.buyer_response_seconds, action: act('prepareConfirmation', { kind: 'receipt' }) })
+          else if (!r.buyer_accepted_at) todo({ key: `${pid}:t:accept`, kind: 'accept', publicId: pid, waitingOn: 'me', deadline: r.buyer_acknowledged_at + r.inspection_seconds, action: act('prepareConfirmation', { kind: 'accept' }) })
+          else todo({ key: `${pid}:t:finalize`, kind: 'finalize', publicId: pid, waitingOn: 'me', deadline: null, action: act('prepareConfirmation', { kind: 'finalize' }) })
+        }
+        if (!r.seller_declared_at && r.handover_deadline < now) todo({ key: `${pid}:t:flag`, kind: 'flag_overdue', publicId: pid, waitingOn: 'anyone', deadline: null, action: null })
+      } else if (r.stage === 'overdue' || r.stage === 'disputed') {
+        todo({ key: `${pid}:t:case:${r.stage}`, kind: 'wait_arbiter', publicId: pid, waitingOn: 'arbiter', deadline: null, action: null })
+      } else if (r.stage === 'appealed') {
+        todo({ key: `${pid}:t:wait_reviewer`, kind: 'wait_reviewer', publicId: pid, waitingOn: 'reviewer', deadline: null, action: null })
+      }
+
       // --- what happened (onchain events in the last 30 days)
       const ev = await dbAll<EventRow>(
         `SELECT name, tx_hash, log_index, block_timestamp, args_json FROM chain_events
@@ -137,6 +181,8 @@ route('GET', '/notifications', async (ctx) => {
         const deadline = pre ? Number((JSON.parse(pre.args_json) as Record<string, string>).appealDeadline) : 0
         const b = deadline ? bucket(deadline - now) : null
         if (b) add({ key: `${pid}:appeal_due:${b}`, kind: 'appeal_due', publicId: pid, at: now, severity: 'urgent', params: { deadline } })
+        if (deadline && deadline > now) todo({ key: `${pid}:t:appeal_window`, kind: 'appeal_window', publicId: pid, waitingOn: 'me', deadline, action: act('prepareDisputeOrAppeal', { kind: 'appeal' }) })
+        else todo({ key: `${pid}:t:finalize_ruling`, kind: 'finalize_ruling', publicId: pid, waitingOn: 'anyone', deadline: null, action: null })
       }
     }
 
@@ -157,7 +203,10 @@ route('GET', '/notifications', async (ctx) => {
       pending.set(c.on_chain_id, cur)
     }
     for (const [id, p] of pending) {
-      if (p.amount > 0n) add({ key: `${p.pid ?? id}:claim_pending:${p.amount}`, kind: 'claim_pending', publicId: p.pid, at: now, severity: 'warn', params: { amount: p.amount.toString() } })
+      if (p.amount > 0n) {
+        add({ key: `${p.pid ?? id}:claim_pending:${p.amount}`, kind: 'claim_pending', publicId: p.pid, at: now, severity: 'warn', params: { amount: p.amount.toString() } })
+        if (p.pid) todo({ key: `${p.pid}:t:claim`, kind: 'claim', publicId: p.pid, waitingOn: 'me', deadline: null, action: { tool: 'prepareClaim', input: { publicId: p.pid } } })
+      }
     }
   }
 
@@ -166,6 +215,19 @@ route('GET', '/notifications', async (ctx) => {
     "SELECT id, updated_at FROM drafts WHERE creator_account = ? AND counterparty_account IS NOT NULL AND status NOT IN ('submitted','escrow_created','cancelled')",
     s.accountId,
   )
+  const mineDrafts = await dbAll<{ id: string; status: string; counterparty_account: string | null }>(
+    "SELECT id, status, counterparty_account FROM drafts WHERE (creator_account = ? OR counterparty_account = ?) AND status IN ('draft','invited','negotiating','ready','submitted')",
+    s.accountId,
+    s.accountId,
+  )
+  for (const d of mineDrafts) {
+    const linked = await dbAll<{ n: number }>('SELECT COUNT(*) AS n FROM escrows e JOIN agreement_versions av ON av.agreement_hash = e.agreement_hash WHERE av.draft_id = ? AND e.orphaned = 0', d.id)
+    if ((linked[0]?.n ?? 0) > 0) continue
+    if (!d.counterparty_account) todo({ key: `${d.id}:t:invite`, kind: 'invite', publicId: null, draftId: d.id, waitingOn: 'me', deadline: null, action: { tool: 'prepareInvitation', input: { draftId: d.id } } })
+    else if (d.status === 'submitted') todo({ key: `${d.id}:t:wait_escrow`, kind: 'wait_escrow', publicId: null, draftId: d.id, waitingOn: 'anyone', deadline: null, action: null })
+    else if (d.status === 'ready') todo({ key: `${d.id}:t:create_escrow`, kind: 'create_escrow', publicId: null, draftId: d.id, waitingOn: 'me', deadline: null, action: null })
+    else todo({ key: `${d.id}:t:sign`, kind: 'sign_agreement', publicId: null, draftId: d.id, waitingOn: 'me', deadline: null, action: null })
+  }
   for (const d of joined) add({ key: `${d.id}:draft_joined`, kind: 'draft_joined', publicId: null, at: d.updated_at, severity: 'info', params: { draftId: d.id } })
 
   // --- operators
@@ -192,7 +254,9 @@ route('GET', '/notifications', async (ctx) => {
     .sort((a, b) => b.at - a.at)
     .slice(0, 80)
     .map((i) => ({ ...i, read: seen.has(i.key) }))
-  return { items: sorted, unread: sorted.filter((i) => !i.read).length }
+  const rank = (t: TodoItem) => (t.waitingOn === 'me' ? 0 : 1)
+  todos.sort((a, b) => rank(a) - rank(b) || (a.deadline ?? Number.MAX_SAFE_INTEGER) - (b.deadline ?? Number.MAX_SAFE_INTEGER))
+  return { items: sorted, unread: sorted.filter((i) => !i.read).length, todos: todos.slice(0, 30) }
 })
 
 const readSchema = z.object({ keys: z.array(z.string().min(1).max(200)).min(1).max(200) })

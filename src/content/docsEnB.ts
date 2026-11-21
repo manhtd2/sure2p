@@ -108,10 +108,15 @@ export const docsEnB: Record<string, DocEn> = {
     title: 'Assistant',
     summary: 'The assistant reads your deals and prepares previews. It does not sign, send or rule.',
     blocks: [
-      { p: 'The assistant lives on the Assistant page. It has 12 tools: 4 read tools (your deals, one deal in detail, locked and claimable amounts, dispute status) and 8 prepare tools (agreement, invitation, counteroffer, funding, handover or confirmation, mutual settlement, dispute or appeal, claim).' },
+      { p: 'The assistant is a floating chat window in the corner of the screen once you sign in. Drag it anywhere (or use the arrow keys while the title bar is focused), minimize it when you do not need it, and it remembers where you left it. It has two parts: To do and Ask.' },
+      { ul: [
+        'To do: for each deal it shows whose turn it is, what to do, how long is left before the deadline, and a Prepare button that opens a preview (fund, hand over, confirm receipt, accept, finalize, appeal, claim, invite the other side). The data is computed from live state every time you open it.',
+        'Ask: answers "what do I do next", locked and claimable amounts, and the deadlines of the deal you pick, and answers general questions by searching sure2p\'s docs and FAQ. Free-form model answers exist only when the deployment turns chat on.',
+      ] },
+      { p: 'Behind it are 12 tools: 4 read tools (your deals, one deal in detail, locked and claimable amounts, dispute status) and 8 prepare tools (agreement, invitation, counteroffer, funding, handover or confirmation, mutual settlement, dispute or appeal, claim). With model chat off you use the Prepare buttons under To do; drafting a new agreement, counteroffers and mutual settlements still happen on the deal pages as usual.' },
       { h: 'How a prepare tool works' },
       { steps: [
-        'You enter the details (or tell the assistant, if chat is on). If something is missing it asks, it does not guess.',
+        'You press Prepare on a step (or tell the assistant, if model chat is on). If something is missing it asks, it does not guess.',
         'The server re-checks the role, amounts and onchain state, then stores a preview that expires after 300 seconds.',
         'You see the exact amounts, warnings and what is about to happen. A preview is not sent and not an authorization.',
         'You press Continue. The server checks once more; if the state changed, the preview is treated as stale and you prepare it again.',
@@ -124,7 +129,7 @@ export const docsEnB: Record<string, DocEn> = {
         'It never takes an account or role from what you type: everything comes from your signed-in session.',
         "It never sees other people's deals. Evidence contents are not sent to the model, and text inside a file is never treated as a command.",
       ] },
-      { p: 'Model chat is on only when the deployment has a model provider key; when it is off, all 12 tools still work through forms. The conversation is not stored. The manual flow always works when the assistant is down or rate-limited.' },
+      { p: 'Model chat is on only when the deployment has a model provider key; The conversation is not stored. The manual flow always works when the assistant is down or rate-limited.' },
       { pending: 'D04', text: 'The official assistant model provider has not been chosen yet.' },
     ],
   },

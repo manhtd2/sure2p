@@ -8,6 +8,7 @@ import { api } from '@/lib/api'
 import { shortAddress } from '@/lib/format'
 import { MockBanner } from './MockBanner'
 import { NotificationBell } from './NotificationBell'
+import { ChatWidget } from './ChatWidget'
 
 export function Layout() {
   const { lang, setLang, tr } = useLang()
@@ -60,11 +61,6 @@ export function Layout() {
               {tr('Tham gia', 'Join')}
             </NavLink>
             {signedIn && (
-              <NavLink to="/assistant" className={link}>
-                {tr('Trợ lý', 'Assistant')}
-              </NavLink>
-            )}
-            {signedIn && (
               <NavLink to="/account" className={link}>
                 {tr('Tài khoản', 'Account')}
               </NavLink>
@@ -116,6 +112,7 @@ export function Layout() {
       </header>
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
         <Outlet />
+        {signedIn && <ChatWidget />}
       </main>
       <footer className="mx-auto w-full max-w-5xl px-4 pb-24 pt-4 text-xs text-[var(--subtle)]">
         {tr(

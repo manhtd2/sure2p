@@ -1,5 +1,15 @@
 import { usdcWithCommas, formatDateTime } from '@/lib/format'
 
+export interface TodoItem {
+  key: string
+  kind: string
+  publicId: string | null
+  draftId: string | null
+  waitingOn: 'me' | 'other' | 'arbiter' | 'reviewer' | 'anyone'
+  deadline: number | null
+  action: { tool: string; input: Record<string, string> } | null
+}
+
 export interface NotificationItem {
   key: string
   kind: string
@@ -73,5 +83,33 @@ export function describeNotification(n: NotificationItem, tr: Tr, lang: 'vi' | '
       }
     default:
       return { title: n.kind, body: '', to }
+  }
+}
+
+/** What a next step means in plain words. Only facts come from the server; the wording is here. */
+export function describeTodo(t: TodoItem, tr: Tr): { title: string; hint: string; to: string } {
+  const to = t.publicId ? `/transactions/${t.publicId}` : t.draftId ? `/transactions/${t.draftId}` : '/transactions'
+  switch (t.kind) {
+    case 'fund': return { title: tr('Nạp phần của bạn', 'Fund your part'), hint: tr('Cho phép chuyển đúng số USDC rồi nạp. Đủ cả hai bên thì giao dịch mới hoạt động.', 'Allow exactly that much USDC, then fund. The deal starts only when both sides are in.'), to }
+    case 'wait_fund': return { title: tr('Chờ bên kia nạp tiền', 'Waiting for the other side to fund'), hint: tr('Bạn đã nạp xong. Hết hạn mà chưa đủ thì khoản đã nạp được hoàn, không phạt.', 'Your part is in. If it is not complete by the deadline, funded amounts are refunded with no penalty.'), to }
+    case 'expire': return { title: tr('Hết hạn nạp tiền: gọi lệnh hết hạn', 'Funding window ended: call expire'), hint: tr('Ai cũng gọi được. Các khoản đã nạp thành số chờ nhận về đúng ví gốc.', 'Anyone can. Funded amounts become claimable by their original wallets.'), to }
+    case 'handover': return { title: tr('Bàn giao hàng rồi tuyên bố bàn giao', 'Hand over, then declare handover'), hint: tr('Giao hàng ngoài ứng dụng rồi tuyên bố. Tuyên bố chưa chứng minh người mua đã nhận.', 'Deliver outside the app, then declare. A declaration does not prove the buyer received it.'), to }
+    case 'wait_handover': return { title: tr('Chờ người bán bàn giao', 'Waiting for the seller to hand over'), hint: tr('Quá hạn bàn giao mà chưa tuyên bố thì giao dịch có thể bị đánh dấu quá hạn.', 'If the deadline passes without a declaration the deal can be flagged overdue.'), to }
+    case 'wait_ack': return { title: tr('Chờ người mua xác nhận đã nhận', 'Waiting for the buyer to confirm receipt'), hint: tr('Người mua phải phản hồi trong cửa sổ phản hồi.', 'The buyer must respond within the response window.'), to }
+    case 'ack': return { title: tr('Xác nhận bạn đã nhận hàng', 'Confirm you received the goods'), hint: tr('Chỉ xác nhận nếu bạn thật sự đã nhận. Việc này bắt đầu cửa sổ kiểm tra của bạn.', 'Confirm only if you really have them. This starts your inspection window.'), to }
+    case 'wait_accept': return { title: tr('Chờ người mua chấp thuận', 'Waiting for the buyer to accept'), hint: tr('Người mua đang trong cửa sổ kiểm tra.', 'The buyer is inside the inspection window.'), to }
+    case 'accept': return { title: tr('Kiểm tra hàng rồi chấp thuận hoặc mở tranh chấp', 'Inspect, then accept or open a dispute'), hint: tr('Hàng đúng thỏa thuận thì chấp thuận. Không đúng thì mở tranh chấp trước khi hết cửa sổ kiểm tra.', 'If it matches, accept. If not, open a dispute before the inspection window ends.'), to }
+    case 'finalize': return { title: tr('Chốt giao dịch', 'Finalize the deal'), hint: tr('Người bán nhận đủ giá, hai bên nhận lại cọc. Sau đó mỗi ví tự nhận phần của mình.', 'The seller gets the full price, both get deposits back. Then each wallet claims its own part.'), to }
+    case 'flag_overdue': return { title: tr('Đã quá hạn bàn giao: có thể đánh dấu quá hạn', 'Handover is overdue: it can be flagged'), hint: tr('Ai cũng đánh dấu được để Arbiter xem xét. Tiền không tự chuyển.', 'Anyone can flag it for the Arbiter. Nothing moves by itself.'), to }
+    case 'wait_arbiter': return { title: tr('Tiền đang khóa, chờ Arbiter', 'Funds locked, waiting for the Arbiter'), hint: tr('Bạn có thể gửi bằng chứng, hoặc hai bên cùng ký thỏa thuận chung.', 'You can add evidence, or both sides can sign a mutual settlement.'), to }
+    case 'wait_reviewer': return { title: tr('Đã kháng cáo, chờ người xem xét', 'Appealed, waiting for the reviewer'), hint: tr('Phán quyết của người xem xét là chung cuộc.', "The reviewer's ruling is final."), to }
+    case 'appeal_window': return { title: tr('Có phán quyết sơ bộ: kháng cáo nếu không đồng ý', 'Preliminary ruling: appeal if you disagree'), hint: tr('Kháng cáo một lần cho cả vụ. Không kháng cáo thì phán quyết thành cuối sau 72 giờ.', 'One appeal for the whole case. Without one the ruling becomes final after 72 hours.'), to }
+    case 'finalize_ruling': return { title: tr('Hết hạn kháng cáo: chốt phán quyết', 'Appeal window over: finalize the ruling'), hint: tr('Ai cũng chốt được. Sau đó từng ví tự nhận phần của mình.', 'Anyone can finalize. Then each wallet claims its own part.'), to }
+    case 'claim': return { title: tr('Nhận tiền về ví của bạn', 'Claim funds to your wallet'), hint: tr('Tiền đã được ghi có nhưng chỉ vào ví sau giao dịch nhận tiền của chính ví đó.', 'The money is credited but reaches the wallet only after that wallet claims.'), to }
+    case 'invite': return { title: tr('Mời bên còn lại', 'Invite the other side'), hint: tr('Một liên kết, mã hoặc mã quét, hết hạn sau 24 giờ.', 'One link, code or QR, valid for 24 hours.'), to }
+    case 'sign_agreement': return { title: tr('Xem lại và ký thỏa thuận', 'Review and sign the agreement'), hint: tr('Cả hai ví phải ký cùng một phiên bản. Mỗi lần sửa sẽ hủy chữ ký cũ.', 'Both wallets must sign the same version. Any change cancels earlier signatures.'), to }
+    case 'create_escrow': return { title: tr('Tạo ký quỹ trên chuỗi', 'Create the escrow onchain'), hint: tr('Cả hai đã ký. Một bên gửi giao dịch tạo ký quỹ; hạn nạp 24 giờ tính từ lúc đó.', 'Both signed. One side sends the create transaction; the 24 hour funding window starts then.'), to }
+    case 'wait_escrow': return { title: tr('Đang chờ ký quỹ được ghi nhận', 'Waiting for the escrow to be recorded'), hint: tr('Giao dịch đã gửi, bộ quét sẽ cập nhật sau vài giây.', 'The transaction was sent; the indexer updates in a few seconds.'), to }
+    default: return { title: t.kind, hint: '', to }
   }
 }
