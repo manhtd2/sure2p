@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import { useAccount, usePublicClient, useSwitchChain } from 'wagmi'
+import { useEnsureWallet } from '@/hooks/useWalletAuth'
 import type { Hex } from 'viem'
 import { CHAIN_ID } from '@/lib/contracts'
 
@@ -12,11 +13,21 @@ export interface TxState {
 }
 
 /** Maps wallet and RPC errors to short, user-facing reasons. User rejection is not an error. */
-export function parseTxError(err: unknown, tr: (vi: string, en: string) => string): { rejected: boolean; message: string } {
+export function parseTxError(err: unknown, tr: (vi: string, en: string) => string): { rejected: boolean; message: string; unauthorized?: boolean } {
   const e = err as { code?: number; message?: string; shortMessage?: string; cause?: { code?: number } }
   const msg = `${e?.shortMessage ?? ''} ${e?.message ?? ''}`.toLowerCase()
   if (e?.code === 4001 || e?.cause?.code === 4001 || msg.includes('user rejected') || msg.includes('user denied')) {
     return { rejected: true, message: tr('Bạn đã hủy yêu cầu trong ví.', 'You cancelled the request in your wallet.') }
+  }
+  if (e?.code === 4100 || e?.cause?.code === 4100 || msg.includes('has not been authorized') || msg.includes('not been authorized')) {
+    return {
+      rejected: false,
+      unauthorized: true,
+      message: tr(
+        'Ví chưa cho phép trang này dùng tài khoản đang chọn. Mở ví, kết nối trang với đúng tài khoản (hoặc chọn lại tài khoản), rồi bấm Kết nối ví lại và thử lại.',
+        'Your wallet has not allowed this site to use the selected account. Open the wallet, connect the site to that account (or pick it again), then reconnect the wallet here and retry.',
+      ),
+    }
   }
   if (msg.includes('insufficient funds') || msg.includes('exceeds balance')) {
     return { rejected: false, message: tr('Số dư không đủ để thanh toán phí gas hoặc số tiền.', 'Not enough balance for gas or the amount.') }
@@ -38,6 +49,7 @@ export function parseTxError(err: unknown, tr: (vi: string, en: string) => strin
  */
 export function useTx(tr: (vi: string, en: string) => string) {
   const { chainId } = useAccount()
+  const ensureWallet = useEnsureWallet()
   const { switchChainAsync } = useSwitchChain()
   const publicClient = usePublicClient({ chainId: CHAIN_ID })
   const [state, setState] = useState<TxState>({ phase: 'idle' })
@@ -45,6 +57,7 @@ export function useTx(tr: (vi: string, en: string) => string) {
   const run = useCallback(
     async (send: () => Promise<Hex>, onConfirmed?: (hash: Hex) => unknown, onSubmitted?: (hash: Hex) => unknown) => {
       try {
+        await ensureWallet()
         if (chainId !== CHAIN_ID) await switchChainAsync({ chainId: CHAIN_ID })
         setState({ phase: 'awaiting_signature' })
         const hash = await send()

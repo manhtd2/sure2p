@@ -66,6 +66,8 @@ export const docsC: Doc[] = [
       { p: 'Bộ quét có thể chậm vài khối. Ứng dụng hiện Đang chờ quét kèm liên kết giao dịch. Đợi vài giây rồi tải lại; thử lại không tạo giao dịch trùng.' },
       { h: 'Ví từ chối ký hoặc giao dịch bị hoàn' },
       { p: 'Ứng dụng không ghi thành công giả. Kiểm tra số dư USDC cho phí mạng và số đã cho phép chuyển, rồi thử lại.' },
+      { h: 'Ví báo "account has not been authorized" (chưa được cấp quyền)' },
+      { p: 'Ví chưa cho trang này dùng tài khoản đang chọn, thường vì bạn vừa đổi tài khoản hoặc dùng ví mới. Mở ví, kết nối trang với đúng tài khoản, rồi bấm "Ngắt kết nối ví này để chọn ví khác" và kết nối lại. Nếu có nhiều tiện ích ví cùng cài trong trình duyệt, hãy tắt các ví không dùng.' },
       { h: 'Mã xác thực không tới' },
       { p: 'Bản thử nghiệm dùng mã giả hiện ngay trên màn hình, có nhãn rõ. Nếu hết hạn hoặc nhập sai quá số lần, xin mã mới.' },
       { h: 'Tải bằng chứng bị từ chối' },

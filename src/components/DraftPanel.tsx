@@ -11,6 +11,7 @@ import type { DraftView } from '@/lib/types'
 import { agreementFromJson, agreementTypes, eip712Domain } from '@/shared/protocol'
 import { handoverDeadlineError } from '@/shared/validation'
 import { useTx, parseTxError } from '@/hooks/useTx'
+import { useEnsureWallet } from '@/hooks/useWalletAuth'
 import { refForFile, uploadAttachment } from '@/lib/attachments'
 import { FILE_ACCEPT } from '@/shared/files'
 import { useNow } from '@/hooks/useNow'
@@ -30,6 +31,7 @@ export function DraftPanel({ draftId }: { draftId: string }) {
   const { address } = useAccount()
   const navigate = useNavigate()
   const { signTypedDataAsync } = useSignTypedData()
+  const ensureWallet = useEnsureWallet()
   const { writeContractAsync } = useWriteContract()
   const tx = useTx(tr)
   const now = useNow(30_000)
@@ -101,6 +103,7 @@ export function DraftPanel({ draftId }: { draftId: string }) {
     setBusy(true)
     setActionError(null)
     try {
+      await ensureWallet()
       const signature = await signTypedDataAsync({
         domain: eip712Domain(CHAIN_ID, ESCROW_ADDRESS),
         types: agreementTypes,
@@ -111,7 +114,7 @@ export function DraftPanel({ draftId }: { draftId: string }) {
       await qc.invalidateQueries({ queryKey: ['draft', draftId] })
     } catch (e) {
       const parsed = parseTxError(e, tr)
-      setActionError(parsed.rejected ? parsed.message : errorText(e, tr))
+      setActionError(parsed.rejected || parsed.unauthorized ? parsed.message : errorText(e, tr))
     } finally {
       setBusy(false)
     }

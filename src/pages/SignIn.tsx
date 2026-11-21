@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { ConnectKitButton } from 'connectkit'
-import { useAccount, useSignMessage, useSwitchChain } from 'wagmi'
+import { useAccount, useDisconnect, useSignMessage, useSwitchChain } from 'wagmi'
+import { useEnsureWallet } from '@/hooks/useWalletAuth'
 import { CheckCircle2, FlaskConical, Loader2, Phone, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 import { useLang } from '@/i18n'
@@ -37,6 +38,8 @@ export default function SignIn() {
   const { address, isConnected, chainId } = useAccount()
   const { switchChainAsync } = useSwitchChain()
   const { signMessageAsync } = useSignMessage()
+  const ensureWallet = useEnsureWallet()
+  const { disconnectAsync } = useDisconnect()
 
   if (hasWallet && me?.chainId === CHAIN_ID) return <Navigate to={next} replace />
 
@@ -79,6 +82,7 @@ export default function SignIn() {
     setBusy(true)
     setError(null)
     try {
+      await ensureWallet()
       if (chainId !== CHAIN_ID) await switchChainAsync({ chainId: CHAIN_ID })
       const { message } = await api<{ message: string }>('/auth/wallet/challenge', { body: { address } })
       const signature = await signMessageAsync({ message })
@@ -87,7 +91,7 @@ export default function SignIn() {
       toast.success(tr('Đã liên kết ví.', 'Wallet linked.'))
     } catch (e) {
       const parsed = parseTxError(e, tr)
-      setError(parsed.rejected ? parsed.message : errorText(e, tr))
+      setError(parsed.rejected || parsed.unauthorized ? parsed.message : errorText(e, tr))
     } finally {
       setBusy(false)
     }
@@ -202,6 +206,11 @@ export default function SignIn() {
                     </button>
                   )}
                 </ConnectKitButton.Custom>
+                {isConnected && (
+                  <button type="button" className="w-full text-xs text-[var(--muted)] underline" onClick={() => void disconnectAsync()}>
+                    {tr('Ngắt kết nối ví này để chọn ví khác', 'Disconnect this wallet to pick another')}
+                  </button>
+                )}
                 <button type="button" className="btn btn-primary w-full" onClick={() => void linkWallet()} disabled={busy || !isConnected}>
                   {busy ? <Loader2 className="size-4 animate-spin" /> : chainId !== CHAIN_ID && isConnected ? tr('Chuyển sang Arc Testnet và ký', 'Switch to Arc Testnet and sign') : tr('Ký để liên kết ví', 'Sign to link wallet')}
                 </button>

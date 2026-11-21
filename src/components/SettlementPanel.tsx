@@ -10,6 +10,7 @@ import { parseUsdc } from '@/onchain-money'
 import type { EscrowView, SettlementProposalView } from '@/lib/types'
 import { eip712Domain, settlementFromJson, settlementTypes } from '@/shared/protocol'
 import { parseTxError } from '@/hooks/useTx'
+import { useEnsureWallet } from '@/hooks/useWalletAuth'
 import { ChainAction } from './ChainAction'
 
 interface Props {
@@ -25,6 +26,7 @@ export function SettlementPanel({ view, onChanged }: Props) {
   const { tr, lang } = useLang()
   const qc = useQueryClient()
   const { signTypedDataAsync } = useSignTypedData()
+  const ensureWallet = useEnsureWallet()
   const { writeContractAsync } = useWriteContract()
   const [refund, setRefund] = useState('')
   const [busy, setBusy] = useState(false)
@@ -68,6 +70,7 @@ export function SettlementPanel({ view, onChanged }: Props) {
     setBusy(true)
     setError(null)
     try {
+      await ensureWallet()
       const signature = await signTypedDataAsync({
         domain: eip712Domain(CHAIN_ID, ESCROW_ADDRESS),
         types: settlementTypes,
@@ -78,7 +81,7 @@ export function SettlementPanel({ view, onChanged }: Props) {
       await qc.invalidateQueries({ queryKey: key })
     } catch (e) {
       const parsed = parseTxError(e, tr)
-      setError(parsed.rejected ? parsed.message : errorText(e, tr))
+      setError(parsed.rejected || parsed.unauthorized ? parsed.message : errorText(e, tr))
     } finally {
       setBusy(false)
     }
