@@ -16,12 +16,14 @@ Built with [Arc Studio](https://studio.arc.io)
 - See a time-progress bar for the deal. It is informational only and does not move money.
 - Confirm handover and receipt, then claim your funds to your own wallet. The seller receives the full price even when the deal finishes early, and both deposits are returned.
 - If a deal goes overdue or is disputed, funds are locked. The way out is a mutual settlement that both sides sign, or a ruling by an Arbiter who splits the price and can penalize the at-fault side by up to 100% of its own deposit. Either side can appeal once within 72 hours to a different reviewer.
-- Upload evidence (images, PDF, text) for an open case. Only the two sides and the Arbiter and Appeal Reviewer can open it, and you can anchor a file's hash onchain.
+- Upload evidence (images, PDF, text, CSV, Excel, Word) for an open case. Files are encrypted, checked on upload for macros, scripts and similar tricks (a basic check, not antivirus), and downloaded through links that expire after 300 seconds. Only the two sides and the Arbiter and Appeal Reviewer can open them, and you can anchor a file's hash onchain.
+- A notification bell and inbox: deadline reminders, what the other side did, disputes, rulings and claims waiting. They are worked out from live onchain state; nothing is sent by email or SMS.
+- An assistant page with 12 tools (4 read, 8 prepare). It only prepares previews that expire after 300 seconds; it never signs, sends or rules. Model chat turns on only when you set `AI_API_KEY`.
 - Arbiter and Appeal Reviewer use the admin console at `/admin`. It appears only for the wallet that holds the role onchain.
 - The penalty wallet signs in the same way and opens `/admin` to claim the penalties paid to it, one deal at a time.
 - Switch the interface between Vietnamese and English.
 
-Not included yet: notifications and the AI assistant.
+Not included yet: email or SMS notifications, a real SMS provider for the phone code, an external object store and antivirus for evidence, and independent review of the English translations (the Vietnamese text controls).
 
 ## Tech stack
 
@@ -45,6 +47,8 @@ Environment variables (names only, see `.env.example`):
 - `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`: persistent database (Vercel). Leave unset locally to use the SQLite file.
 - `OTP_PROVIDER`: only `mock` exists, and it is refused in production unless `DEMO_ALLOW_MOCK_OTP=true` (demo only — the code is returned by the API).
 - `SESSION_SECRET`, `PHONE_ENCRYPTION_KEY`: required in production, generated locally otherwise.
+- `EVIDENCE_ENCRYPTION_KEY`: optional, 32 bytes of hex for encrypting evidence files. When unset it is derived from `PHONE_ENCRYPTION_KEY`.
+- `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL`: optional. Enable assistant chat against any OpenAI-compatible endpoint. Without a key chat is off and the tools still work.
 - `CRON_SECRET`: bearer token for the Vercel Cron indexer endpoint.
 - `INDEXER_LAZY_MIN_INTERVAL_MS`, `INDEXER_LAZY_TIMEOUT_MS`: serverless indexer tuning.
 - `APP_ORIGIN`: extra allowed browser origins.

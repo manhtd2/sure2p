@@ -56,6 +56,30 @@ export function route(method: string, path: string, handler: Handler): void {
   routes.push({ method, regex: new RegExp(`^${pattern}$`), keys, handler })
 }
 
+/**
+ * Runs another registered route for the same signed-in caller with a fixed JSON body. Every check of that route
+ * (session, wallet, role, rate limit, validation) still applies. Used when the assistant confirms a prepared action.
+ */
+export async function callRoute(ctx: Ctx, method: string, path: string, payload?: unknown): Promise<unknown> {
+  const url = new URL(path, ctx.url)
+  const match = routes.find((r) => r.method === method && r.regex.test(url.pathname))
+  if (!match) throw notFound()
+  const m = match.regex.exec(url.pathname)!
+  const params: Record<string, string> = {}
+  match.keys.forEach((k, i) => (params[k] = decodeURIComponent(m[i + 1])))
+  const sub: Ctx = {
+    ...ctx,
+    url,
+    params,
+    async body<T>(schema: ZodType<T>): Promise<T> {
+      const parsed = schema.safeParse(payload ?? {})
+      if (!parsed.success) throw new HttpError(400, 'invalid_input', parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '))
+      return parsed.data
+    },
+  }
+  return match.handler(sub)
+}
+
 const SESSION_COOKIE = 's2p_sid'
 const SESSION_TTL = 12 * 60 * 60
 const MAX_BODY_BYTES = 64 * 1024
@@ -212,7 +236,8 @@ export async function handle(req: Request): Promise<Response> {
         url.pathname.startsWith('/transactions') ||
         url.pathname.startsWith('/admin') ||
         // The draft page polls for the publicId right after createEscrow, so it must trigger a sync too.
-        url.pathname.startsWith('/drafts'))
+        url.pathname.startsWith('/drafts') ||
+        url.pathname === '/notifications')
     ) {
       await maybeSyncIndexer().catch(() => undefined)
     }

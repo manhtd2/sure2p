@@ -7,6 +7,7 @@ import { api, errorText } from '@/lib/api'
 import { CHAIN_ID, ESCROW_ADDRESS, escrowAbi } from '@/lib/contracts'
 import { formatDateTime } from '@/lib/format'
 import { FILE_ACCEPT, mimeForFilename } from '@/shared/files'
+import { openProtectedFile } from '@/lib/attachments'
 import type { EvidenceFile } from '@/lib/types'
 import { ChainAction } from './ChainAction'
 
@@ -117,7 +118,15 @@ export function EvidencePanel({ publicId, onChainId, canUpload, canAnchor }: Pro
           {files.map((f) => (
             <li key={f.id} className="inner space-y-2 p-3 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <a className="inline-flex items-center gap-1.5 font-semibold underline" href={`/api/transactions/${publicId}/evidence?evidenceId=${f.id}`} download={f.filename}>
+                <a
+                  className="inline-flex items-center gap-1.5 font-semibold underline"
+                  href={`/api/transactions/${publicId}/evidence?evidenceId=${f.id}`}
+                  download={f.filename}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    openProtectedFile(`/api/transactions/${publicId}/evidence?evidenceId=${f.id}`, f.filename).catch((err) => setError(errorText(err, tr)))
+                  }}
+                >
                   <FileText className="size-4" /> {f.filename}
                 </a>
                 <span className="chip">{f.uploadedBy === 'buyer' ? 'Buyer' : 'Seller'}</span>
@@ -126,6 +135,9 @@ export function EvidencePanel({ publicId, onChainId, canUpload, canAnchor }: Pro
                 {sizeLabel(f.size)} · {formatDateTime(f.createdAt, lang)}
               </div>
               {f.note && <p className="whitespace-pre-wrap break-words text-[var(--ink-2)]">{f.note}</p>}
+              {f.scan?.verdict === 'warn' && (
+                <p className="rounded-lg bg-[#fff4d6] p-2 text-xs text-[var(--warn)]">{tr('Cảnh báo từ kiểm tra cơ bản', 'Basic check warning')}: {f.scan.reasons.join('; ')}</p>
+              )}
               <div className="mono break-all text-[10px] text-[var(--subtle)]">sha256 {f.sha256}</div>
               {f.anchored ? (
                 <p className="flex items-center gap-1.5 text-xs font-medium text-[var(--success)]">

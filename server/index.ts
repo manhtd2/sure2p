@@ -18,6 +18,8 @@ import './routes/settlements.js'
 import './routes/evidence.js'
 import './routes/admin.js'
 import './routes/public.js'
+import './routes/notifications.js'
+import './routes/assistant.js'
 import { startIndexer } from './indexer/index.js'
 
 if (typeof Bun === 'undefined') {

@@ -16,6 +16,13 @@ export interface Doc {
   blocks: Block[]
 }
 
+/** English reference translation of one article. The Vietnamese article is the controlling version. */
+export interface DocEn {
+  title: string
+  summary: string
+  blocks: Block[]
+}
+
 export const DOC_VERSION = '2026-11-20'
 export const DOC_REVIEWED = '2026-11-20'
 
@@ -27,4 +34,14 @@ export const GROUP_TITLES: Record<DocGroup, string> = {
   product: 'Sản phẩm',
   technical: 'Kỹ thuật',
   resources: 'Tài nguyên',
+}
+
+export const GROUP_TITLES_EN: Record<DocGroup, string> = {
+  start: 'Getting started',
+  trading: 'Trading',
+  disputes: 'Disputes',
+  trust: 'Trust',
+  product: 'Product',
+  technical: 'Technical',
+  resources: 'Resources',
 }

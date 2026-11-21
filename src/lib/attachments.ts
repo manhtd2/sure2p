@@ -32,3 +32,18 @@ export function formatBytes(n: number): string {
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
   return `${(n / (1024 * 1024)).toFixed(1)} MB`
 }
+
+/**
+ * Private files are served only with a link signed for the signed-in account that expires after 300 seconds.
+ * Ask for a fresh link, then download the file with it.
+ */
+export async function openProtectedFile(href: string, filename: string): Promise<void> {
+  const path = href.replace(/^\/api/, '')
+  const { exp, sig } = await api<{ exp: number; sig: string }>(`${path}${path.includes('?') ? '&' : '?'}link=1`)
+  const a = document.createElement('a')
+  a.href = `${href}${href.includes('?') ? '&' : '?'}exp=${exp}&sig=${sig}`
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+}

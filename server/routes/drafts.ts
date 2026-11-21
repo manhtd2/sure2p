@@ -15,6 +15,7 @@ import {
 import { newDraftRef, randomToken } from '../lib/crypto.js'
 import { createInvitation } from './invitations.js'
 import { ATTACHMENT_MAX_BYTES, mimeForFilename } from '../../src/shared/files.js'
+import { logFile, scanOrReject, serveProtected, vaultPut } from '../lib/vault.js'
 import { MAX_ATTACH_BODY, MAX_DRAFT_FILES, attachmentsOf, draftFileResponse, missingAttachments } from '../lib/attachments.js'
 import { matchesMime } from '../lib/evidenceFile.js'
 import {
@@ -78,9 +79,8 @@ route('GET', '/drafts/:id', async (ctx) => {
   if (attachment) {
     const versions = await listVersions(draft.id)
     const referenced = versions.some((v) => attachmentsOf(parseTerms(v.terms_json)).some((a) => a.sha256 === attachment))
-    const res = referenced ? await draftFileResponse(draft.id, attachment) : null
-    if (!res) throw notFound()
-    return res
+    if (!referenced) throw notFound()
+    return serveProtected(ctx, { kind: 'draft-attachment', ownerRef: draft.id, fileKey: attachment, load: () => draftFileResponse(draft.id, attachment) })
   }
   return draftView(draft, accountId)
 })
@@ -217,7 +217,7 @@ const attachSchema = z.object({
  * The Buyer uploads a description file for the goods. The file's hash goes into the terms that both
  * sides sign, so after signing it can no longer be swapped; bytes are stored once per hash and never updated.
  */
-async function attachFile(ctx: Ctx): Promise<{ sha256: string; size: number; mime: string; duplicate: boolean }> {
+async function attachFile(ctx: Ctx): Promise<{ sha256: string; size: number; mime: string; duplicate: boolean; scan?: { verdict: string; reasons: string[] } }> {
   const s = requireWallet(ctx)
   const { draft, accountId } = await memberDraft(ctx, ctx.params.id)
   if (buyerAccountOf(draft) !== accountId) throw new HttpError(403, 'attachments_buyer_only', 'Only the Buyer can attach description files')
@@ -230,26 +230,35 @@ async function attachFile(ctx: Ctx): Promise<{ sha256: string; size: number; mim
   if (bytes.length === 0) throw new HttpError(400, 'invalid_input', 'The file is empty')
   if (bytes.length > ATTACHMENT_MAX_BYTES) throw new HttpError(413, 'too_large', 'File is larger than 3 MB')
   if (!matchesMime(bytes, mime)) throw new HttpError(400, 'invalid_file', 'The file content does not match its type')
+  const scan = await scanOrReject({ bytes, mime, account: accountId, scope: 'draft', ownerRef: draft.id })
   const sha256 = createHash('sha256').update(bytes).digest('hex')
   const existing = await dbGet('SELECT 1 AS x FROM draft_files WHERE draft_id = ? AND sha256 = ?', draft.id, sha256)
   if (existing) return { sha256, size: bytes.length, mime, duplicate: true }
   const count = await dbGet<{ n: number }>('SELECT COUNT(*) AS n FROM draft_files WHERE draft_id = ?', draft.id)
   if ((count?.n ?? 0) >= MAX_DRAFT_FILES) throw new HttpError(409, 'too_many_files', 'This draft already has the maximum number of files')
+  const fileId = randomToken(12)
   await dbRun(
     `INSERT INTO draft_files (id, draft_id, sha256, filename, mime, size, content, uploaded_by, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    randomToken(12),
+    fileId,
     draft.id,
     sha256,
     body.filename.replace(/[\\/\u0000-\u001f]/g, '_'),
     mime,
     bytes.length,
-    bytes,
+    new Uint8Array(0),
     accountId,
     nowSec(),
   )
+  try {
+    await vaultPut({ id: fileId, scope: 'draft', ownerRef: draft.id, sha256, bytes, scan })
+  } catch (err) {
+    await dbRun('DELETE FROM draft_files WHERE id = ?', fileId)
+    throw err
+  }
+  await logFile(accountId, 'draft', draft.id, fileId, 'upload', { sha256, size: bytes.length, verdict: scan.verdict })
   await audit(accountId, 'draft.file_attached', draft.id, { sha256, size: bytes.length, wallet: s.wallet })
-  return { sha256, size: bytes.length, mime, duplicate: false }
+  return { sha256, size: bytes.length, mime, duplicate: false, scan: { verdict: scan.verdict, reasons: scan.reasons } }
 }
 
 route('POST', '/drafts/:id/attach', attachFile)
@@ -275,6 +284,7 @@ async function deleteDraft(ctx: Ctx): Promise<{ ok: boolean }> {
   await dbTx(async () => {
     await dbRun('DELETE FROM invitations WHERE draft_id = ?', draft.id)
     await dbRun('DELETE FROM agreement_versions WHERE draft_id = ?', draft.id)
+    await dbRun("DELETE FROM vault_objects WHERE scope = 'draft' AND id IN (SELECT id FROM draft_files WHERE draft_id = ?)", draft.id)
     await dbRun('DELETE FROM draft_files WHERE draft_id = ?', draft.id)
     await dbRun('DELETE FROM pending_txs WHERE draft_id = ?', draft.id)
     // The guard is repeated here so a counterparty claiming at the same moment wins and the delete rolls back.

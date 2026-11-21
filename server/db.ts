@@ -248,6 +248,63 @@ CREATE TABLE IF NOT EXISTS draft_files (
   UNIQUE (draft_id, sha256)
 );
 
+-- Encrypted private store for evidence and description files (AES-256-GCM, one random IV per object).
+-- A vault row shares its id with the evidence or draft_files row it belongs to; that row's own content column is then empty.
+CREATE TABLE IF NOT EXISTS vault_objects (
+  id TEXT PRIMARY KEY,
+  scope TEXT NOT NULL CHECK (scope IN ('evidence','draft')),
+  owner_ref TEXT NOT NULL,
+  sha256 TEXT NOT NULL,
+  size INTEGER NOT NULL,
+  iv BLOB NOT NULL,
+  tag BLOB NOT NULL,
+  ciphertext BLOB NOT NULL,
+  scan_verdict TEXT NOT NULL CHECK (scan_verdict IN ('clean','warn')),
+  scan_reasons TEXT NOT NULL DEFAULT '[]',
+  scanner TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vault_owner ON vault_objects(scope, owner_ref);
+
+-- Access log for private files: uploads, rejected uploads, signed-link issues and downloads. Append only.
+CREATE TABLE IF NOT EXISTS file_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  at INTEGER NOT NULL,
+  account_id TEXT,
+  scope TEXT NOT NULL,
+  owner_ref TEXT NOT NULL,
+  file_ref TEXT,
+  action TEXT NOT NULL,
+  detail TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_file_log_owner ON file_log(scope, owner_ref, at);
+
+-- Which derived notifications an account has already seen. The notifications themselves are computed from live state.
+CREATE TABLE IF NOT EXISTS notification_reads (
+  account_id TEXT NOT NULL,
+  key TEXT NOT NULL,
+  read_at INTEGER NOT NULL,
+  PRIMARY KEY (account_id, key)
+);
+
+-- Assistant action previews. A preview is not an authorization: it only lives 300 seconds and does nothing until the
+-- signed-in account confirms it, and a wallet call still needs the wallet's own signature.
+CREATE TABLE IF NOT EXISTS action_previews (
+  id TEXT PRIMARY KEY,
+  account_id TEXT NOT NULL,
+  wallet TEXT,
+  chain_id INTEGER NOT NULL,
+  contract TEXT NOT NULL,
+  tool TEXT NOT NULL,
+  fingerprint TEXT NOT NULL,
+  preview_json TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'ready' CHECK (status IN ('ready','confirmed','cancelled','stale')),
+  created_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL,
+  confirmed_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_previews_account ON action_previews(account_id, created_at);
+
 -- Plain-text reasons behind a hash that was sent onchain (ruling reasons, appeal reasons).
 CREATE TABLE IF NOT EXISTS case_notes (
   hash TEXT PRIMARY KEY,

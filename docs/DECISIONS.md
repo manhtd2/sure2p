@@ -95,3 +95,10 @@ Nothing below has been decided; no value has been invented. See `docs/SPEC_GAP.m
 - A ban needs the contract's `fraudConfirmed(id)` to name that side, which only a final ruling can do.
 - Nothing is written to the registry. The registry SECURITY_ROLE stays with the shared platform wallet and is not used. This is a deliberate deviation from the spec (security admin separate from the owner, wallet-level ban). Concentration of power: the owner can already replace the arbiter and reviewer, and now also bans accounts after a final ruling.
 - To reach the spec fully later: deploy a registry owned by the project wallet and redeploy the V3 bytecode pointing to it (option 1).
+
+## Assistant, notifications, evidence vault, English (decided 2026-11-21)
+
+- Assistant: 12 tools (4 read, 8 prepare), previews stored in `action_previews`, 300 second expiry, one account and wallet, re-validated at confirm (a changed state makes the preview stale). Server-side writes go through the existing routes via `callRoute`, so every existing check still applies; onchain actions return wallet steps that the browser signs. Model chat (`POST /assistant`) is off unless `AI_API_KEY` is set, and the adapter for it was NOT exercised against a real provider. Chat is not stored. D04 (provider) stays open.
+- Notifications: in-app only, derived on every read from escrow rows and chain events; only "which keys were read" is stored (`notification_reads`). No email or SMS.
+- Evidence vault (option "app level"): per-file AES-256-GCM in `vault_objects` (key `EVIDENCE_ENCRYPTION_KEY`, or derived from `PHONE_ENCRYPTION_KEY`), downloads need a link signed for the account that expires in 300 seconds, an append-only `file_log`, and a built-in structure scan (`server/lib/scan.ts`). This is NOT antivirus and does not replace an object store or a scanner; D04 and D09 stay open. Files uploaded before the vault are encrypted the first time they are read.
+- English: reference translation of the 22 docs, 7 policies and the FAQ. The Vietnamese text controls until the owner names a translation reviewer (D10). The changelog entries are Vietnamese only.

@@ -78,7 +78,7 @@ export function useTx(tr: (vi: string, en: string) => string) {
         return false
       }
     },
-    [chainId, switchChainAsync, publicClient, tr],
+    [chainId, ensureWallet, switchChainAsync, publicClient, tr],
   )
 
   const reset = useCallback(() => setState({ phase: 'idle' }), [])

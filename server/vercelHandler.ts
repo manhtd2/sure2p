@@ -26,6 +26,8 @@ import './routes/settlements.js'
 import './routes/evidence.js'
 import './routes/admin.js'
 import './routes/public.js'
+import './routes/notifications.js'
+import './routes/assistant.js'
 import { handle } from './http.js'
 
 export const config = {

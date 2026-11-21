@@ -1,6 +1,8 @@
 import { FileText, Lock, ShieldAlert } from 'lucide-react'
 import { useLang } from '@/i18n'
-import { formatBytes } from '@/lib/attachments'
+import { toast } from 'sonner'
+import { errorText } from '@/lib/api'
+import { formatBytes, openProtectedFile } from '@/lib/attachments'
 import type { AttachmentRef } from '@/shared/protocol'
 
 interface Props {
@@ -27,7 +29,17 @@ export function AttachmentList({ files, href, lock, missing = [] }: Props) {
               <span className="flex min-w-0 items-center gap-2">
                 <FileText className="size-4 shrink-0" />
                 {href && !absent ? (
-                  <a className="truncate font-semibold underline" href={href(f.sha256)} download={f.name}>{f.name}</a>
+                  <a
+                    className="truncate font-semibold underline"
+                    href={href(f.sha256)}
+                    download={f.name}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      openProtectedFile(href(f.sha256), f.name).catch((err) => toast.error(errorText(err, tr)))
+                    }}
+                  >
+                    {f.name}
+                  </a>
                 ) : (
                   <span className="truncate font-semibold">{f.name}</span>
                 )}

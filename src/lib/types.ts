@@ -104,6 +104,7 @@ export interface RulingView {
 }
 
 export interface EvidenceFile {
+  scan?: { verdict: 'clean' | 'warn'; reasons: string[] } | null
   id: string
   filename: string
   mime: string

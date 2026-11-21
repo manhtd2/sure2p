@@ -11,6 +11,10 @@ interface Entry {
 }
 
 const ENTRIES: Entry[] = [
+  { date: '2026-11-21', area: 'Trợ lý', kind: 'Thêm mới', title: 'Trang Trợ lý với 12 công cụ chỉ đọc và chỉ chuẩn bị, bản xem trước hết hạn sau 300 giây; chat bằng mô hình tắt cho tới khi có khóa', impact: 'Trợ lý không ký, không gửi, không phán quyết. Mọi hành động trên chuỗi vẫn do ví của bạn ký.', state: 'repo' },
+  { date: '2026-11-21', area: 'Thông báo', kind: 'Thêm mới', title: 'Chuông và hộp thư thông báo tính từ trạng thái thật: nhắc hạn, việc bên kia làm, tranh chấp, phán quyết, tiền chờ nhận', impact: 'Chỉ trong ứng dụng, chưa gửi qua thư hay tin nhắn.', state: 'repo' },
+  { date: '2026-11-21', area: 'Bằng chứng', kind: 'Thay đổi', title: 'Bằng chứng và tệp mô tả được mã hóa AES-256-GCM, tải bằng liên kết ký 300 giây, có nhật ký truy cập và kiểm tra cơ bản khi tải lên', impact: 'Kiểm tra cơ bản không phải phần mềm diệt virus. Tệp cũ được mã hóa lần đầu khi được đọc.', state: 'repo' },
+  { date: '2026-11-21', area: 'Tài liệu', kind: 'Thay đổi', title: 'Bản tiếng Anh tham khảo cho 22 bài tài liệu, 7 chính sách và hỏi đáp', impact: 'Bản tiếng Việt là bản chính cho tới khi chỉ định người duyệt bản dịch.', state: 'repo' },
   { date: '2026-11-21', area: 'Ví', kind: 'Sửa lỗi', title: 'Kiểm tra ví đã cấp quyền cho đúng tài khoản trước khi ký hoặc gửi giao dịch; thông báo dễ hiểu cho lỗi "chưa được cấp quyền"', impact: 'Ví mới hoặc vừa đổi tài khoản không còn báo lỗi thô và có nút ngắt kết nối để kết nối lại.', state: 'repo' },
   { date: '2026-11-20', area: 'Quản trị', kind: 'Thay đổi', title: 'Console quản trị tách thành Tổng quan, Hồ sơ, Kháng cáo, Ký quỹ, Tài khoản, Nhật ký và Cài đặt; luồng cấm tài khoản cho quản trị bảo mật', impact: 'Chỉ ví giữ vai trò trên chuỗi mới vào được. Cấm chỉ chặn giao dịch mới và cần phán quyết cuối xác nhận gian lận.', state: 'repo' },
   { date: '2026-11-20', area: 'Giao dịch', kind: 'Sửa lỗi', title: 'Trang bản nháp kích hoạt bộ quét sau khi tạo ký quỹ, để mã công khai hiện ra trên Vercel', impact: 'Trước đó mã công khai có thể chậm hiện cho tới khi mở trang giao dịch.', state: 'repo' },

@@ -2,7 +2,9 @@
 import { dbAll, dbGet } from '../db.js'
 import { type AttachmentRef, type DealTerms } from '../../src/shared/protocol.js'
 import { ATTACHMENT_MAX_BYTES } from '../../src/shared/files.js'
-import { bytesFromDb, fileResponse } from './evidenceFile.js'
+import { fileResponse } from './evidenceFile.js'
+import { readStoredFile } from './vault.js'
+import type { AllowedMime } from '../../src/shared/files.js'
 
 export const MAX_ATTACH_BODY = Math.ceil((ATTACHMENT_MAX_BYTES * 4) / 3) + 4096
 /** Uploaded files per draft, including ones dropped by a later version. Bounds storage. */
@@ -29,12 +31,14 @@ export async function missingAttachments(draftId: string, terms: DealTerms): Pro
 
 export async function draftFileResponse(draftId: string, sha256: string): Promise<Response | null> {
   if (!/^[0-9a-f]{64}$/.test(sha256)) return null
-  const f = await dbGet<{ filename: string; mime: string; content: unknown }>(
-    'SELECT filename, mime, content FROM draft_files WHERE draft_id = ? AND sha256 = ?',
+  const f = await dbGet<{ id: string; filename: string; mime: string }>(
+    'SELECT id, filename, mime FROM draft_files WHERE draft_id = ? AND sha256 = ?',
     draftId,
     sha256,
   )
-  return f ? fileResponse(bytesFromDb(f.content), f.mime, f.filename) : null
+  if (!f) return null
+  const bytes = await readStoredFile({ table: 'draft_files', scope: 'draft', id: f.id, ownerRef: draftId, sha256, mime: f.mime as AllowedMime })
+  return bytes ? fileResponse(bytes, f.mime, f.filename) : null
 }
 
 /** A file referenced by the signed agreement of this escrow. Only hashes in that agreement can be fetched. */

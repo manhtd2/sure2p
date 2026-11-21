@@ -7,6 +7,7 @@ import { useSession } from '@/hooks/useSession'
 import { api } from '@/lib/api'
 import { shortAddress } from '@/lib/format'
 import { MockBanner } from './MockBanner'
+import { NotificationBell } from './NotificationBell'
 
 export function Layout() {
   const { lang, setLang, tr } = useLang()
@@ -59,6 +60,11 @@ export function Layout() {
               {tr('Tham gia', 'Join')}
             </NavLink>
             {signedIn && (
+              <NavLink to="/assistant" className={link}>
+                {tr('Trợ lý', 'Assistant')}
+              </NavLink>
+            )}
+            {signedIn && (
               <NavLink to="/account" className={link}>
                 {tr('Tài khoản', 'Account')}
               </NavLink>
@@ -78,6 +84,7 @@ export function Layout() {
             >
               {lang === 'vi' ? 'EN' : 'VI'}
             </button>
+            {signedIn && <NotificationBell />}
             {signedIn ? (
               <button type="button" onClick={() => void signOut()} className="btn btn-ghost !min-h-9 !px-3 text-xs" title={tr('Đăng xuất', 'Sign out')}>
                 <span className="mono">{shortAddress(me?.wallet) === '-' ? tr('Chưa có ví', 'No wallet') : shortAddress(me?.wallet)}</span>

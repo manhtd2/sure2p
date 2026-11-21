@@ -48,6 +48,11 @@ class Session {
     public phone: string,
   ) {}
 
+  /** Raw response (binary downloads), same cookie jar. */
+  async raw(path: string): Promise<Response> {
+    return fetch(`${API}${path}`, { headers: { 'X-Requested-With': 'XMLHttpRequest', Cookie: this.cookie } })
+  }
+
   async call<T>(method: 'GET' | 'POST', path: string, body?: unknown, expectStatus = 200): Promise<T> {
     const res = await fetch(`${API}${path}`, {
       method,
@@ -254,13 +259,50 @@ async function main() {
 
   // ---------- Trade 2: dispute then dual-signed partial-refund settlement ----------
   const t2 = await negotiateAndCreate(seller, buyer, price, `E2E settlement ${stamp}`)
+
+  // ---------- Assistant: previews only, nothing moves until the wallet signs ----------
+  const prepFund = await buyer.call<{ id: string; preview: { amounts: Array<{ value: string }>; effect: { type: string; steps: Array<{ functionName: string }> } } }>('POST', '/actions?op=prepare', { tool: 'prepareFunding', input: { publicId: t2.publicId } })
+  record('assistant prepares funding as approve + fundBuyer', prepFund.preview.effect.type === 'wallet_call' && prepFund.preview.effect.steps.map((x) => x.functionName).join('+') === 'approve+fundBuyer', prepFund.preview.effect.steps.map((x) => x.functionName).join('+'))
+  const confFund = await buyer.call<{ status: string; steps: unknown[] }>('POST', `/actions?op=confirm&id=${prepFund.id}`)
+  record('confirming a funding preview hands back wallet steps and moves nothing', confFund.status === 'sign' && confFund.steps.length === 2)
+  const otherFund = await seller.call('POST', `/actions?op=confirm&id=${prepFund.id}`, {}, 404)
+  record("the other account cannot confirm someone else's preview", true)
+  void otherFund
+
   await fund(seller, buyer, t2.id, t2.agreement)
+  const prepHandover = await seller.call<{ preview: { effect: { steps: Array<{ functionName: string }> } } }>('POST', '/actions?op=prepare', { tool: 'prepareConfirmation', input: { publicId: t2.publicId, kind: 'handover', note: 'e2e' } })
+  record('assistant prepares declareHandover for the seller', prepHandover.preview.effect.steps[0].functionName === 'declareHandover')
+  await buyer.call('POST', '/actions?op=prepare', { tool: 'prepareConfirmation', input: { publicId: t2.publicId, kind: 'receipt' } }, 409)
+  record('receipt cannot be prepared before a handover was declared (409)', true)
+  const prepDispute = await buyer.call<{ preview: { effect: { steps: Array<{ functionName: string }> } } }>('POST', '/actions?op=prepare', { tool: 'prepareDisputeOrAppeal', input: { publicId: t2.publicId, kind: 'dispute', reason: 'The goods do not match the description in the agreement' } })
+  record('assistant prepares openDispute for the buyer', prepDispute.preview.effect.steps[0].functionName === 'openDispute')
   await send(buyer.account, 'buyer opens a dispute (funds lock)', () => wallet(buyer.account).writeContract({ address: ESCROW, abi: escrowAbi, functionName: 'openDispute', args: [t2.id, keccak256(toBytes('not as described'))] }))
   await waitFor('indexer sees dispute', async () => {
     const v = await seller.call<{ stage: string }>('GET', `/transactions/${t2.publicId}`)
     return v.stage === 'disputed' ? v : null
   })
   record('indexer projected the disputed stage', true)
+
+  // ---------- Private evidence vault: scan, encryption at rest, signed 300 s links ----------
+  const evPath = `/transactions/${t2.publicId}/evidence`
+  const pdfBytes = Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF')
+  const up = await buyer.call<{ id: string; scan: { verdict: string } }>('POST', evPath, { filename: 'proof.pdf', mime: 'application/pdf', dataBase64: pdfBytes.toString('base64'), note: 'e2e' })
+  record('clean evidence accepted and scanned', up.scan.verdict === 'clean', up.scan.verdict)
+  await buyer.call('POST', evPath, { filename: 'bad.pdf', mime: 'application/pdf', dataBase64: Buffer.from('%PDF-1.4\n<</S/JavaScript/JS(x)>>').toString('base64') }, 422)
+  record('pdf with JavaScript refused (422)', true)
+  const noLink = await buyer.raw(`${evPath}?evidenceId=${up.id}`)
+  record('download without a signed link refused', noLink.status === 403, String(noLink.status))
+  const link = await buyer.call<{ exp: number; sig: string }>('GET', `${evPath}?evidenceId=${up.id}&link=1`)
+  const dl = await buyer.raw(`${evPath}?evidenceId=${up.id}&exp=${link.exp}&sig=${link.sig}`)
+  const got = Buffer.from(await dl.arrayBuffer())
+  record('signed link returns the exact bytes', dl.status === 200 && got.equals(pdfBytes), `status ${dl.status}`)
+  record('link expires within 300 seconds', link.exp - Math.floor(Date.now() / 1000) <= 300)
+  const other = await seller.raw(`${evPath}?evidenceId=${up.id}&exp=${link.exp}&sig=${link.sig}`)
+  record("another account cannot reuse the buyer's link", other.status === 403, String(other.status))
+  const forged = await buyer.raw(`${evPath}?evidenceId=${up.id}&exp=${link.exp}&sig=${'0'.repeat(64)}`)
+  record('forged signature refused', forged.status === 403, String(forged.status))
+  const listed = await seller.call<{ files: Array<{ id: string; scan: { verdict: string } | null }> }>('GET', evPath)
+  record('other party sees the file with its scan result', listed.files.some((f) => f.id === up.id && f.scan?.verdict === 'clean'))
 
   await seller.call('POST', `/transactions/${t2.publicId}/settlements`, { buyerPriceRefund: '100000' })
   const prop = await buyer.call<{ proposal: { id: string; settlement: SettlementJson } }>('GET', `/transactions/${t2.publicId}/settlements`)

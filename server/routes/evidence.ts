@@ -10,7 +10,8 @@ import { dbAll, dbGet, dbRun, nowSec } from '../db.js'
 import { env } from '../env.js'
 import { HttpError, notFound, rateLimit, requireSession, route, type Ctx } from '../http.js'
 import { randomToken } from '../lib/crypto.js'
-import { ALLOWED_MIME, bytesFromDb, fileResponse, matchesMime } from '../lib/evidenceFile.js'
+import { ALLOWED_MIME, fileResponse, matchesMime, type AllowedMime } from '../lib/evidenceFile.js'
+import { logFile, readStoredFile, scanInfo, scanOrReject, serveProtected, vaultPut } from '../lib/vault.js'
 import { escrowAttachmentResponse } from '../lib/attachments.js'
 import { adminRoleOf, anchoredHashes } from '../lib/rulings.js'
 import { OPEN_CASE_STAGES, isPublicId } from '../../src/shared/protocol.js'
@@ -73,7 +74,8 @@ export async function evidenceList(row: EscrowRow) {
     row.public_id,
   )
   const anchored = await anchoredHashes(row.on_chain_id)
-  return files.map((f) => ({
+  const scans = await Promise.all(files.map((f) => scanInfo(f.id)))
+  return files.map((f, i) => ({
     id: f.id,
     filename: f.filename,
     mime: f.mime,
@@ -83,6 +85,7 @@ export async function evidenceList(row: EscrowRow) {
     uploadedBy: getAddress(f.uploader_wallet) === getAddress(row.buyer_wallet) ? ('buyer' as const) : ('seller' as const),
     createdAt: f.created_at,
     anchored: anchored.get(`0x${f.sha256}`) ?? null,
+    scan: scans[i] ? { verdict: scans[i]!.verdict, reasons: scans[i]!.reasons } : null,
   }))
 }
 
@@ -96,9 +99,12 @@ route('GET', '/transactions/:publicId/evidence', async (ctx) => {
   // ?attachment=<sha256> downloads a description file from the signed agreement (locked once both sides signed).
   const attachment = ctx.url.searchParams.get('attachment')
   if (attachment) {
-    const res = await escrowAttachmentResponse(row.agreement_hash, attachment)
-    if (!res) throw notFound()
-    return res
+    return serveProtected(ctx, {
+      kind: 'attachment',
+      ownerRef: row.public_id,
+      fileKey: attachment,
+      load: () => escrowAttachmentResponse(row.agreement_hash, attachment),
+    })
   }
   return { files: await evidenceList(row), maxBytes: MAX_EVIDENCE_BYTES, mimeTypes: ALLOWED_MIME }
 })
@@ -115,6 +121,7 @@ route('POST', '/transactions/:publicId/evidence', async (ctx) => {
   if (bytes.length === 0) throw new HttpError(400, 'invalid_input', 'The file is empty')
   if (bytes.length > MAX_EVIDENCE_BYTES) throw new HttpError(413, 'too_large', 'File is larger than 2 MB')
   if (!matchesMime(bytes, body.mime)) throw new HttpError(400, 'invalid_file', 'The file content does not match its type')
+  const scan = await scanOrReject({ bytes, mime: body.mime, account, scope: 'evidence', ownerRef: row.public_id })
   const sha256 = createHash('sha256').update(bytes).digest('hex')
   const existing = await dbGet<{ id: string }>('SELECT id FROM evidence WHERE public_id = ? AND sha256 = ?', row.public_id, sha256)
   if (existing) return { id: existing.id, sha256: `0x${sha256}`, duplicate: true }
@@ -133,20 +140,31 @@ route('POST', '/transactions/:publicId/evidence', async (ctx) => {
     bytes.length,
     sha256,
     body.note ?? null,
-    bytes,
+    new Uint8Array(0),
     nowSec(),
   )
-  return { id, sha256: `0x${sha256}`, duplicate: false }
+  try {
+    await vaultPut({ id, scope: 'evidence', ownerRef: row.public_id, sha256, bytes, scan })
+  } catch (err) {
+    await dbRun('DELETE FROM evidence WHERE id = ?', id)
+    throw err
+  }
+  await logFile(account, 'evidence', row.public_id, id, 'upload', { sha256, size: bytes.length, verdict: scan.verdict })
+  return { id, sha256: `0x${sha256}`, duplicate: false, scan: { verdict: scan.verdict, reasons: scan.reasons } }
 })
 
-async function downloadEvidence(ctx: Ctx, row: EscrowRow, evidenceId: string): Promise<Response> {
-  const file = await dbGet<EvidenceRow & { content: unknown }>(
-    `SELECT ${META_COLUMNS}, content FROM evidence WHERE id = ? AND public_id = ?`,
-    evidenceId,
-    row.public_id,
-  )
+async function downloadEvidence(ctx: Ctx, row: EscrowRow, evidenceId: string) {
+  const file = await dbGet<EvidenceRow>(`SELECT ${META_COLUMNS} FROM evidence WHERE id = ? AND public_id = ?`, evidenceId, row.public_id)
   if (!file) throw notFound()
-  return fileResponse(bytesFromDb(file.content), file.mime, file.filename)
+  return serveProtected(ctx, {
+    kind: 'evidence',
+    ownerRef: row.public_id,
+    fileKey: file.id,
+    load: async () => {
+      const bytes = await readStoredFile({ table: 'evidence', scope: 'evidence', id: file.id, ownerRef: row.public_id, sha256: file.sha256, mime: file.mime as AllowedMime })
+      return bytes ? fileResponse(bytes, file.mime, file.filename) : null
+    },
+  })
 }
 
 route('GET', '/transactions/:publicId/evidence/:evidenceId', async (ctx) => {

@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { Search } from 'lucide-react'
 import { useLang } from '@/i18n'
 import { Blocks, headings } from '@/content/blocks'
-import { DOCS, DOC_REVIEWED, DOC_VERSION, GROUP_TITLES, docByCode, docByPath, docHref, docSearchText, type DocGroup } from '@/content/docs'
+import { DOCS, DOC_REVIEWED, DOC_VERSION, GROUP_TITLES, GROUP_TITLES_EN, docByCode, docByPath, docHref, docSearchText, localize, type DocGroup } from '@/content/docs'
 
 export default function Docs() {
   const { '*': splat } = useParams()
@@ -15,9 +15,10 @@ export default function Docs() {
   const hits = useMemo(() => {
     const needle = q.trim().toLowerCase()
     if (!needle) return null
-    return DOCS.filter((d) => docSearchText(d).includes(needle))
-  }, [q])
+    return DOCS.filter((d) => docSearchText(d, lang).includes(needle))
+  }, [q, lang])
 
+  const groupTitles = lang === 'en' ? GROUP_TITLES_EN : GROUP_TITLES
   const groups = (Object.keys(GROUP_TITLES) as DocGroup[]).map((g) => ({ g, docs: DOCS.filter((d) => d.group === g) }))
 
   return (
@@ -31,7 +32,7 @@ export default function Docs() {
         <nav className="mt-4 space-y-4 rounded-2xl bg-[var(--accent)] p-4 text-white" aria-label={tr('Mục lục tài liệu', 'Docs menu')}>
           {groups.map(({ g, docs }) => (
             <div key={g}>
-              <p className="mb-1 text-[0.7rem] font-semibold uppercase tracking-wider text-white/60">{GROUP_TITLES[g]}</p>
+              <p className="mb-1 text-[0.7rem] font-semibold uppercase tracking-wider text-white/60">{groupTitles[g]}</p>
               <ul className="space-y-0.5">
                 {docs.map((d) => (
                   <li key={d.code}>
@@ -39,7 +40,7 @@ export default function Docs() {
                       to={docHref(d)}
                       className={`block rounded-lg px-2 py-1 text-sm hover:bg-white/10 ${doc?.code === d.code ? 'bg-white/15 font-semibold' : 'text-white/85'}`}
                     >
-                      {d.title}
+                      {localize(d, lang).title}
                     </Link>
                   </li>
                 ))}
@@ -52,7 +53,7 @@ export default function Docs() {
       <section className="min-w-0">
         {lang === 'en' && (
           <p className="mb-4 rounded-xl border border-dashed border-[var(--border-strong)] bg-[var(--surface-muted)] p-3 text-sm">
-            English translation of the docs is pending (decision D10: who owns translation). The articles below are in Vietnamese.
+            English is a reference translation. The Vietnamese text is the controlling version until the project owner names who reviews translations (decision D10).
           </p>
         )}
         {hits ? (
@@ -64,8 +65,8 @@ export default function Docs() {
               <ul className="mt-3 space-y-3">
                 {hits.map((d) => (
                   <li key={d.code}>
-                    <Link to={docHref(d)} className="font-semibold text-[var(--accent-hover)] underline" onClick={() => setQ('')}>{d.title}</Link>
-                    <p className="text-sm text-[var(--muted)]">{d.summary}</p>
+                    <Link to={docHref(d)} className="font-semibold text-[var(--accent-hover)] underline" onClick={() => setQ('')}>{localize(d, lang).title}</Link>
+                    <p className="text-sm text-[var(--muted)]">{localize(d, lang).summary}</p>
                   </li>
                 ))}
               </ul>
@@ -87,16 +88,17 @@ export default function Docs() {
 }
 
 function Article({ path }: { path: string }) {
-  const { tr } = useLang()
+  const { tr, lang } = useLang()
   const d = docByPath(path)
   if (!d) return null
-  const toc = headings(d.blocks)
+  const L = localize(d, lang)
+  const toc = headings(L.blocks)
   const related = d.related.map(docByCode).filter((x): x is NonNullable<typeof x> => Boolean(x))
   return (
     <article className="card p-6">
-      <p className="label">{GROUP_TITLES[d.group]} · {d.code}</p>
-      <h1 className="display text-2xl font-bold">{d.title}</h1>
-      <p className="mt-1 text-sm text-[var(--muted)]">{d.summary}</p>
+      <p className="label">{(lang === 'en' ? GROUP_TITLES_EN : GROUP_TITLES)[d.group]} · {d.code}</p>
+      <h1 className="display text-2xl font-bold">{L.title}</h1>
+      <p className="mt-1 text-sm text-[var(--muted)]">{L.summary}</p>
       <p className="mono mt-2 text-xs text-[var(--subtle)]">
         {tr('Phiên bản', 'Version')} {DOC_VERSION} · {tr('Rà soát', 'Reviewed')} {DOC_REVIEWED} · {tr('Nguồn đặc tả', 'Spec')} {d.spec} · {d.priority}
       </p>
@@ -110,13 +112,13 @@ function Article({ path }: { path: string }) {
           </ul>
         </nav>
       )}
-      <div className="mt-5"><Blocks blocks={d.blocks} /></div>
+      <div className="mt-5"><Blocks blocks={L.blocks} /></div>
       {related.length > 0 && (
         <div className="mt-6 border-t border-[var(--border)] pt-4">
           <p className="label">{tr('Bài liên quan', 'Related')}</p>
           <ul className="flex flex-wrap gap-2">
             {related.map((r) => (
-              <li key={r.code}><Link to={docHref(r)} className="chip hover:underline">{r.title}</Link></li>
+              <li key={r.code}><Link to={docHref(r)} className="chip hover:underline">{localize(r, lang).title}</Link></li>
             ))}
           </ul>
         </div>
@@ -127,7 +129,7 @@ function Article({ path }: { path: string }) {
 
 /** The docs home shows DOC01 followed by the article index. */
 export function DocsHome() {
-  const { tr } = useLang()
+  const { tr, lang } = useLang()
   const home = docByPath('')
   return (
     <div className="space-y-5">
@@ -137,8 +139,8 @@ export function DocsHome() {
         <ul className="mt-3 grid gap-2 sm:grid-cols-2">
           {DOCS.filter((d) => d.path !== '').map((d) => (
             <li key={d.code} className="inner p-3">
-              <Link to={docHref(d)} className="font-semibold text-[var(--accent-hover)] underline">{d.title}</Link>
-              <p className="text-xs text-[var(--muted)]">{d.summary}</p>
+              <Link to={docHref(d)} className="font-semibold text-[var(--accent-hover)] underline">{localize(d, lang).title}</Link>
+              <p className="text-xs text-[var(--muted)]">{localize(d, lang).summary}</p>
             </li>
           ))}
         </ul>

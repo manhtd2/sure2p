@@ -49,7 +49,15 @@ export const docsB: Doc[] = [
     blocks: [
       { p: 'Bằng chứng chỉ hỗ trợ tranh chấp, không phải hàng. Chỉ hai bên và người phán quyết, người xem xét kháng nghị được giao mới xem được. Tệp không bao giờ công khai và không đưa lên chuỗi.' },
       { p: 'Mỗi tệp có mã băm sha256. Một bên có thể neo mã băm đó lên chuỗi để chứng minh tệp tồn tại tại thời điểm đó. Chuỗi chỉ lưu mã băm, không lưu nội dung.' },
-      { ul: ['Giới hạn hiện tại: 2 MB mỗi bằng chứng, tối đa 25 tệp mỗi giao dịch.', 'Loại tệp: PNG, JPEG, WebP, PDF, văn bản, CSV, Excel, Word.', 'Tệp mô tả hàng của người mua riêng biệt và bị khóa theo chữ ký.'] },
+      { ul: [
+        'Giới hạn hiện tại: 2 MB mỗi bằng chứng, tối đa 25 tệp mỗi giao dịch.',
+        'Loại tệp: PNG, JPEG, WebP, PDF, văn bản, CSV, Excel, Word.',
+        'Tệp mô tả hàng của người mua riêng biệt và bị khóa theo chữ ký.',
+        'Mỗi tệp được mã hóa AES-256-GCM trước khi lưu. Tải về cần một liên kết ký riêng cho tài khoản của bạn và hết hạn sau 300 giây, nên không chia sẻ được.',
+        'Khi tải lên, ứng dụng kiểm tra cơ bản và từ chối tệp có macro, mã thực thi, script trong PDF, tệp nén bom hoặc dữ liệu giấu sau ảnh.',
+        'Nộp, bị từ chối, cấp liên kết và tải về đều được ghi vào nhật ký truy cập chỉ thêm, không sửa.',
+      ] },
+      { warn: 'Kiểm tra cơ bản KHÔNG phải phần mềm diệt virus. Nó chỉ nhìn cấu trúc tệp và không thấy được bên trong dữ liệu đã nén, nên một tệp độc hại vẫn có thể lọt qua. Chỉ mở tệp từ nguồn bạn tin cậy.' },
       { warn: 'Không nộp mật khẩu, khóa riêng, cụm từ khôi phục hay khóa API. Nội dung tệp bằng chứng chỉ là dữ liệu, không phải chỉ dẫn.' },
       { pending: 'D09', text: 'Cỡ tệp tối đa, loại tệp và thời hạn lưu cuối cùng.' },
     ],
