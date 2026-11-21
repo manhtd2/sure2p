@@ -4,7 +4,7 @@
  * signed-in session, never from the caller's input.
  */
 import { createHash, randomBytes } from 'node:crypto'
-import { erc20Abi, getAddress, keccak256, toBytes } from 'viem'
+import { erc20Abi, formatUnits, getAddress, keccak256, parseUnits, toBytes } from 'viem'
 import { z } from 'zod'
 import { dbAll, dbGet, nowSec } from '../db.js'
 import { env } from '../env.js'
@@ -16,9 +16,12 @@ import { memberEscrow, type EscrowRow } from '../routes/transactions.js'
 import { escrowAbi } from '../../src/shared/escrowAbi.js'
 import { dealTermsSchema, handoverDeadlineError } from '../../src/shared/validation.js'
 import { depositFor, type DealTerms } from '../../src/shared/protocol.js'
-import { formatUsdc, parseUsdc } from '../../src/onchain-money.js'
 
 export const PREVIEW_TTL_SECONDS = 300
+
+// Plain viem here on purpose: src/onchain-money.ts imports through the `@/` alias, which the serverless bundle cannot resolve.
+const parseUsdc = (v: string): bigint => parseUnits(v, 6)
+const formatUsdc = (n: bigint): string => formatUnits(n, 6)
 
 export interface CallStep {
   to: 'escrow' | 'usdc'
