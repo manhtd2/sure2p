@@ -17,8 +17,11 @@ function apiKey(): string {
 export const chatEnabled = () => apiKey() !== ''
 
 /** Well-known OpenAI-compatible endpoints, picked from the key's prefix when AI_BASE_URL is not set. */
-function baseUrlFor(key: string): string {
-  if (process.env.AI_BASE_URL) return process.env.AI_BASE_URL.trim().replace(/\/$/, '')
+export function baseUrlFor(key: string, configured: string | undefined = process.env.AI_BASE_URL): string {
+  // Tolerate quotes, any number of trailing slashes (Gemini answers 404 to "openai//chat/completions"), and a pasted
+  // full endpoint that already ends with /chat/completions.
+  const base = (configured ?? '').trim().replace(/^[\"']+|[\"']+$/g, '').trim().replace(/\/chat\/completions\/*$/i, '').replace(/\/+$/, '')
+  if (base) return base
   if (key.startsWith('sk-or-')) return 'https://openrouter.ai/api/v1'
   if (key.startsWith('sk-ant-')) return 'https://api.anthropic.com/v1'
   if (key.startsWith('AIza')) return 'https://generativelanguage.googleapis.com/v1beta/openai'
@@ -81,16 +84,19 @@ export async function runChat(ctx: Ctx, input: z.infer<typeof chatSchema>): Prom
       signal: AbortSignal.timeout(45_000),
     })
     if (!res.ok) {
+      const where = new URL(`${base}/chat/completions`).pathname
       // Pass on the provider's own reason (it never contains our key) so a wrong key, model or base URL is easy to see.
       let reason = ''
       try {
-        const body = (await res.json()) as { error?: { message?: string } | string; message?: string }
+        // Gemini wraps its errors in an array, OpenAI does not.
+        const raw = (await res.json()) as unknown
+        const body = (Array.isArray(raw) ? raw[0] : raw) as { error?: { message?: string } | string; message?: string }
         reason = (typeof body.error === 'string' ? body.error : body.error?.message ?? body.message ?? '').replace(/\s+/g, ' ').slice(0, 200)
       } catch {
         /* no JSON body */
       }
-      const hint = res.status === 401 || res.status === 403 ? ` Check that AI_API_KEY belongs to ${host}, or set AI_BASE_URL and AI_MODEL for your provider.` : res.status === 404 ? ' Check AI_MODEL and AI_BASE_URL.' : ''
-      throw new HttpError(502, 'assistant_upstream', `The model provider (${host}) answered ${res.status}${reason ? `: ${reason}` : ''}.${hint}`)
+      const hint = res.status === 401 || res.status === 403 ? ` Check that AI_API_KEY belongs to ${host}, or set AI_BASE_URL and AI_MODEL for your provider.` : res.status === 404 ? ' Check AI_MODEL and AI_BASE_URL (the base URL must not already include /chat/completions).' : res.status === 429 ? ' The provider is rate limiting this key (free tiers have low limits); try again in a minute.' : ''
+      throw new HttpError(502, 'assistant_upstream', `The model provider (${host}) answered ${res.status} for POST ${where}${reason ? `: ${reason}` : ''}.${hint}`)
     }
     const data = (await res.json()) as { choices?: Array<{ message?: ChatMessage }> }
     const msg = data.choices?.[0]?.message
