@@ -29,6 +29,25 @@ export function baseUrlFor(key: string, configured: string | undefined = process
   return 'https://api.openai.com/v1'
 }
 
+/**
+ * Chat model ids this key can use, from the provider's OpenAI-compatible /models list. Best effort and short: it only
+ * runs after the provider said a model was not found, so the next step is a name to copy instead of a guess.
+ */
+export async function listChatModels(base: string, key: string): Promise<string[]> {
+  try {
+    const res = await fetch(`${base}/models`, { headers: { Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(5000) })
+    if (!res.ok) return []
+    const raw = (await res.json()) as { data?: Array<{ id?: string }> } | Array<{ id?: string }>
+    const rows = Array.isArray(raw) ? raw : (raw.data ?? [])
+    return rows
+      .map((m) => String(m.id ?? '').replace(/^models\//, ''))
+      .filter((id) => id !== '' && !/embed|tts|image|imagen|veo|live|audio|aqa|whisper|moderation|dall-e/i.test(id))
+      .slice(0, 12)
+  } catch {
+    return []
+  }
+}
+
 /** Which endpoint and model chat will use. Never includes the key. */
 export function chatTarget(): { host: string; model: string | null } {
   const key = apiKey()
@@ -95,7 +114,9 @@ export async function runChat(ctx: Ctx, input: z.infer<typeof chatSchema>): Prom
       } catch {
         /* no JSON body */
       }
-      const hint = res.status === 401 || res.status === 403 ? ` Check that AI_API_KEY belongs to ${host}, or set AI_BASE_URL and AI_MODEL for your provider.` : res.status === 404 ? ' Check AI_MODEL and AI_BASE_URL (the base URL must not already include /chat/completions).' : res.status === 429 ? ' The provider is rate limiting this key (free tiers have low limits); try again in a minute.' : ''
+      const models = res.status === 404 ? await listChatModels(base, key) : []
+      const available = models.length > 0 ? ` Models this key can use: ${models.join(', ')}. Set AI_MODEL to one of them.` : ''
+      const hint = res.status === 401 || res.status === 403 ? ` Check that AI_API_KEY belongs to ${host}, or set AI_BASE_URL and AI_MODEL for your provider.` : res.status === 404 ? ` Check AI_MODEL and AI_BASE_URL (the base URL must not already include /chat/completions).${available}` : res.status === 429 ? ' The provider is rate limiting this key (free tiers have low limits); try again in a minute.' : ''
       throw new HttpError(502, 'assistant_upstream', `The model provider (${host}) answered ${res.status} for POST ${where}${reason ? `: ${reason}` : ''}.${hint}`)
     }
     const data = (await res.json()) as { choices?: Array<{ message?: ChatMessage }> }
