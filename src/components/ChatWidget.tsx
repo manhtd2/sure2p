@@ -71,7 +71,7 @@ export function ChatWidget() {
   const log = useRef<HTMLUListElement>(null)
 
   const notif = useNotifications(true)
-  const info = useQuery({ queryKey: ['assistant'], queryFn: () => api<{ chat: { enabled: boolean } }>('/assistant'), staleTime: 5 * 60_000, retry: false })
+  const info = useQuery({ queryKey: ['assistant'], queryFn: () => api<{ chat: { enabled: boolean; host?: string; model?: string | null } }>('/assistant'), staleTime: 5 * 60_000, retry: false })
   const list = useQuery({ queryKey: ['transactions'], queryFn: () => api<{ items: ListItem[] }>('/transactions'), staleTime: 30_000 })
   const deals = (list.data?.items ?? []).filter((i) => i.kind === 'escrow') as Array<{ publicId: string; title?: string; stage: string }>
   const allTodos = notif.data?.todos ?? []
@@ -309,7 +309,7 @@ export function ChatWidget() {
       )}
       <p className="border-t border-[var(--border)] px-3 py-1.5 text-[10px] text-[var(--subtle)]">
         {info.data?.chat.enabled
-          ? tr('Câu hỏi tự do được trả lời bằng mô hình; cuộc trò chuyện không được lưu.', 'Free questions are answered by a model; the conversation is not stored.')
+          ? tr(`Câu hỏi tự do do mô hình trả lời (${info.data.chat.host ?? ''}${info.data.chat.model ? ` / ${info.data.chat.model}` : ''}); cuộc trò chuyện không được lưu.`, `Free questions are answered by a model (${info.data.chat.host ?? ''}${info.data.chat.model ? ` / ${info.data.chat.model}` : ''}); the conversation is not stored.`)
           : tr('Trả lời lấy từ tài liệu và hỏi đáp của sure2p, không phải từ mô hình.', "Answers come from sure2p's docs and FAQ, not from a model.")}
       </p>
     </section>

@@ -8,7 +8,37 @@ import { HttpError, type Ctx } from '../http.js'
 import { createPreview } from '../routes/assistant.js'
 import { TOOLS, parseInput } from './tools.js'
 
-export const chatEnabled = () => Boolean(process.env.AI_API_KEY)
+/** The key exactly as the provider needs it: no surrounding quotes, spaces or a pasted "Bearer " prefix. */
+function apiKey(): string {
+  const unquote = (v: string) => v.trim().replace(/^["']+|["']+$/g, '').trim()
+  return unquote(unquote(process.env.AI_API_KEY ?? '').replace(/^Bearer\s+/i, ''))
+}
+
+export const chatEnabled = () => apiKey() !== ''
+
+/** Well-known OpenAI-compatible endpoints, picked from the key's prefix when AI_BASE_URL is not set. */
+function baseUrlFor(key: string): string {
+  if (process.env.AI_BASE_URL) return process.env.AI_BASE_URL.trim().replace(/\/$/, '')
+  if (key.startsWith('sk-or-')) return 'https://openrouter.ai/api/v1'
+  if (key.startsWith('sk-ant-')) return 'https://api.anthropic.com/v1'
+  if (key.startsWith('AIza')) return 'https://generativelanguage.googleapis.com/v1beta/openai'
+  if (key.startsWith('gsk_')) return 'https://api.groq.com/openai/v1'
+  return 'https://api.openai.com/v1'
+}
+
+/** Which endpoint and model chat will use. Never includes the key. */
+export function chatTarget(): { host: string; model: string | null } {
+  const key = apiKey()
+  const base = baseUrlFor(key)
+  let host = base
+  try {
+    host = new URL(base).host
+  } catch {
+    /* keep the raw value */
+  }
+  const isOpenAi = base.startsWith('https://api.openai.com')
+  return { host, model: process.env.AI_MODEL?.trim() || (isOpenAi ? 'gpt-4o-mini' : null) }
+}
 
 const SYSTEM = `You are the sure2p assistant. sure2p holds USDC in escrow for a deal between a buyer and a seller on Arc Testnet.
 
@@ -35,8 +65,10 @@ interface ChatMessage {
 
 export async function runChat(ctx: Ctx, input: z.infer<typeof chatSchema>): Promise<{ reply: string; previews: string[] }> {
   if (!chatEnabled()) throw new HttpError(503, 'assistant_disabled', 'Chat is not enabled on this deployment')
-  const base = (process.env.AI_BASE_URL ?? 'https://api.openai.com/v1').replace(/\/$/, '')
-  const model = process.env.AI_MODEL ?? 'gpt-4o-mini'
+  const key = apiKey()
+  const base = baseUrlFor(key)
+  const { host, model } = chatTarget()
+  if (!model) throw new HttpError(503, 'assistant_misconfigured', `Set AI_MODEL: there is no default model for ${host}.`)
   const tools = TOOLS.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: z.toJSONSchema(t.schema) } }))
   const messages: ChatMessage[] = [{ role: 'system', content: SYSTEM }, ...input.messages]
   const previews: string[] = []
@@ -44,11 +76,22 @@ export async function runChat(ctx: Ctx, input: z.infer<typeof chatSchema>): Prom
   for (let round = 0; round < 5; round++) {
     const res = await fetch(`${base}/chat/completions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.AI_API_KEY}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
       body: JSON.stringify({ model, messages, tools, tool_choice: 'auto', temperature: 0.2 }),
       signal: AbortSignal.timeout(45_000),
     })
-    if (!res.ok) throw new HttpError(502, 'assistant_upstream', `The model provider answered ${res.status}`)
+    if (!res.ok) {
+      // Pass on the provider's own reason (it never contains our key) so a wrong key, model or base URL is easy to see.
+      let reason = ''
+      try {
+        const body = (await res.json()) as { error?: { message?: string } | string; message?: string }
+        reason = (typeof body.error === 'string' ? body.error : body.error?.message ?? body.message ?? '').replace(/\s+/g, ' ').slice(0, 200)
+      } catch {
+        /* no JSON body */
+      }
+      const hint = res.status === 401 || res.status === 403 ? ` Check that AI_API_KEY belongs to ${host}, or set AI_BASE_URL and AI_MODEL for your provider.` : res.status === 404 ? ' Check AI_MODEL and AI_BASE_URL.' : ''
+      throw new HttpError(502, 'assistant_upstream', `The model provider (${host}) answered ${res.status}${reason ? `: ${reason}` : ''}.${hint}`)
+    }
     const data = (await res.json()) as { choices?: Array<{ message?: ChatMessage }> }
     const msg = data.choices?.[0]?.message
     if (!msg) throw new HttpError(502, 'assistant_upstream', 'The model provider returned no answer')

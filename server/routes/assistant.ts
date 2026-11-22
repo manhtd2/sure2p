@@ -8,7 +8,7 @@ import { dbGet, dbRun, nowSec } from '../db.js'
 import { env } from '../env.js'
 import { callRoute, HttpError, notFound, rateLimit, requireWallet, route, type Ctx } from '../http.js'
 import { randomToken } from '../lib/crypto.js'
-import { chatEnabled, chatSchema, runChat } from '../assistant/chat.js'
+import { chatEnabled, chatSchema, chatTarget, runChat } from '../assistant/chat.js'
 import { PREVIEW_TTL_SECONDS, TOOLS, parseInput, toolByName, type Effect, type Preview } from '../assistant/tools.js'
 import { saveNote } from './evidence.js'
 
@@ -111,7 +111,7 @@ async function confirm(ctx: Ctx, id: string) {
 route('GET', '/assistant', (ctx) => {
   requireWallet(ctx)
   return {
-    chat: { enabled: chatEnabled() },
+    chat: { enabled: chatEnabled(), ...(chatEnabled() ? chatTarget() : {}) },
     ttlSeconds: PREVIEW_TTL_SECONDS,
     tools: TOOLS.map((t) => ({ name: t.name, kind: t.kind, description: t.description, parameters: z.toJSONSchema(t.schema) })),
   }
