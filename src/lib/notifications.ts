@@ -49,6 +49,8 @@ export function describeNotification(n: NotificationItem, tr: Tr, lang: 'vi' | '
       return { title: tr('Giao dịch đã kích hoạt', 'Deal is active'), body: tr('Đủ cả ba khoản. Có thể bàn giao ở ngoài ứng dụng.', 'All three amounts are in. Handover can happen outside the app.'), to }
     case 'expired':
       return { title: tr('Giao dịch hết hạn nạp', 'Deal expired unfunded'), body: tr('Các khoản đã nạp trở thành số chờ nhận về đúng ví gốc.', 'Funded amounts became claimable by their original wallets.'), to }
+    case 'delivery_proof':
+      return { title: tr(`Người bán đã tải ${n.params.count} tệp bằng chứng giao hàng`, `The seller added ${n.params.count} proof-of-delivery file(s)`), body: tr('Xem các tệp trước khi xác nhận đã nhận. Đây là bằng chứng hỗ trợ, sure2p không xác minh hàng.', 'Look at the files before you confirm receipt. They are supporting evidence; sure2p does not verify goods.'), to }
     case 'handover_declared':
       return { title: tr('Người bán đã tuyên bố bàn giao', 'The seller declared handover'), body: tr('Hãy kiểm tra hàng rồi xác nhận đã nhận.', 'Check the goods, then confirm receipt.'), to }
     case 'receipt_acknowledged':

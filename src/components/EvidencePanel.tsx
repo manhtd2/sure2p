@@ -54,7 +54,8 @@ export function EvidencePanel({ publicId, onChainId, canUpload, canAnchor }: Pro
     queryFn: () => api<EvidenceResponse>(`/transactions/${publicId}/evidence`),
     refetchInterval: 8000,
   })
-  const files = list.data?.files ?? []
+  // Proof of delivery has its own panel; this one is the case evidence.
+  const files = (list.data?.files ?? []).filter((f) => f.kind !== 'delivery')
   const maxBytes = list.data?.maxBytes ?? 2 * 1024 * 1024
 
   async function upload(file: File) {

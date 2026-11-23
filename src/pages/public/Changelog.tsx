@@ -11,6 +11,7 @@ interface Entry {
 }
 
 const ENTRIES: Entry[] = [
+  { date: '2026-11-23', area: 'Bằng chứng', kind: 'Thêm mới', title: 'Người bán tải bằng chứng giao hàng sau khi tuyên bố bàn giao; người mua xem được và nhận thông báo', impact: 'Tối đa 10 tệp, mã hóa và kiểm tra cơ bản như mọi bằng chứng. Chỉ là bằng chứng hỗ trợ, không xác minh hàng.', state: 'repo' },
   { date: '2026-11-21', area: 'Trợ lý', kind: 'Thay đổi', title: 'Trợ lý thành khung chat nổi kéo thả được, không còn mục trên thanh công cụ; có danh sách việc cần làm theo từng bước giao dịch', impact: 'Trang Trợ lý riêng đã bỏ. Trả lời chung lấy từ tài liệu và hỏi đáp; mô hình chỉ bật khi có khóa.', state: 'repo' },
   { date: '2026-11-21', area: 'Trợ lý', kind: 'Thêm mới', title: 'Trang Trợ lý với 12 công cụ chỉ đọc và chỉ chuẩn bị, bản xem trước hết hạn sau 300 giây; chat bằng mô hình tắt cho tới khi có khóa', impact: 'Trợ lý không ký, không gửi, không phán quyết. Mọi hành động trên chuỗi vẫn do ví của bạn ký.', state: 'repo' },
   { date: '2026-11-21', area: 'Thông báo', kind: 'Thêm mới', title: 'Chuông và hộp thư thông báo tính từ trạng thái thật: nhắc hạn, việc bên kia làm, tranh chấp, phán quyết, tiền chờ nhận', impact: 'Chỉ trong ứng dụng, chưa gửi qua thư hay tin nhắn.', state: 'repo' },

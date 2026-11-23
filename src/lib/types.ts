@@ -111,6 +111,7 @@ export interface EvidenceFile {
   size: number
   sha256: string
   note: string | null
+  kind?: 'evidence' | 'delivery'
   uploadedBy: 'buyer' | 'seller'
   createdAt: number
   anchored: { txHash: string; at: number } | null

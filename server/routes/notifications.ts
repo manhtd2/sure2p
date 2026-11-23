@@ -3,7 +3,7 @@
  * did, rulings, claims waiting. Nothing is pushed or stored except which items the account has already seen.
  */
 import { z } from 'zod'
-import { dbAll, dbRun, nowSec } from '../db.js'
+import { dbAll, dbGet, dbRun, nowSec } from '../db.js'
 import { env } from '../env.js'
 import { requireSession, route } from '../http.js'
 import { adminRoleOf } from '../lib/rulings.js'
@@ -173,6 +173,16 @@ route('GET', '/notifications', async (ctx) => {
           case 'RulingFinalized': add({ ...base, kind: 'ruling_final', severity: 'urgent', params: { byAppeal: args.byAppeal === 'true' ? 1 : 0 } }); break
           case 'MutualSettlementExecuted': add({ ...base, kind: 'settled', severity: 'info', params: {} }); break
         }
+      }
+
+      // --- the seller added proof of delivery (only the buyer is told)
+      if (isBuyer && !isSeller) {
+        const proofs = await dbGet<{ n: number; last: number | null }>(
+          "SELECT COUNT(*) AS n, MAX(created_at) AS last FROM evidence WHERE public_id = ? AND kind = 'delivery' AND created_at > ?",
+          pid,
+          now - EVENT_WINDOW,
+        )
+        if (proofs && proofs.n > 0 && proofs.last) add({ key: `${pid}:delivery:${proofs.n}`, kind: 'delivery_proof', publicId: pid, at: proofs.last, severity: 'info', params: { count: proofs.n } })
       }
 
       // --- appeal window closing (both parties)

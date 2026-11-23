@@ -9,6 +9,9 @@ export const docsB: Doc[] = [
       { p: 'Hàng được giao ngoài ứng dụng. Khi đã giao, người bán tuyên bố bàn giao. Tuyên bố này không chứng minh người mua đã nhận và không tự bắt đầu cửa sổ kiểm tra.' },
       { p: 'Người mua xác nhận đã nhận (bắt đầu cửa sổ kiểm tra, mặc định 72 giờ), rồi chấp thuận hàng đúng thỏa thuận. Nếu người mua chấp thuận trước khi xác nhận nhận, hệ thống ghi cả hai mốc trong cùng một giao dịch.' },
       { ul: ['Chỉ người bán tuyên bố bàn giao.', 'Chỉ người mua xác nhận đã nhận và chấp thuận.', 'Không ai có thể xác nhận thay bên kia.'] },
+      { h: 'Bằng chứng giao hàng của người bán' },
+      { p: 'Sau khi tuyên bố bàn giao, người bán có thể tải tối đa 10 tệp (ảnh chụp màn hình, biên nhận, mã vận đơn) để người mua xem trước khi xác nhận đã nhận. Người mua nhận một thông báo và mở được từng tệp bằng liên kết ngắn hạn; Arbiter và Reviewer cũng xem được nếu có tranh chấp.' },
+      { warn: 'Đây chỉ là bằng chứng hỗ trợ. sure2p không chuyển hàng, không xác minh hàng và không coi tệp này là bằng chứng người mua đã nhận. Tệp đã tải lên không xóa được, được mã hóa và qua kiểm tra cơ bản như mọi tệp khác.' },
     ],
   },
   {

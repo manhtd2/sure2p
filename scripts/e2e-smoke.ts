@@ -243,7 +243,27 @@ async function main() {
   })
   record('contract holds at least 1.5 USDC for a 1 USDC price (1 + 0.25 + 0.25)', held >= 1_500_000n)
 
+  // ---------- Proof of delivery (Seller, after declaring handover; the Buyer can open it) ----------
+  const proofPdf = Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF e2e delivery receipt').toString('base64')
+  const proofBody = { kind: 'delivery', filename: 'receipt.pdf', mime: 'application/pdf', note: 'tracking e2e-123', dataBase64: proofPdf }
+  await seller.call('POST', `/transactions/${t1.publicId}/evidence`, proofBody, 409)
+  record('delivery proof refused before the handover is declared (409)', true)
+
   await send(seller.account, 'seller declares handover', () => wallet(seller.account).writeContract({ address: ESCROW, abi: escrowAbi, functionName: 'declareHandover', args: [t1.id, keccak256(toBytes('emailed files'))] }))
+  const proof = await seller.call<{ id: string; scan: { verdict: string } }>('POST', `/transactions/${t1.publicId}/evidence`, proofBody)
+  record('seller adds proof of delivery right after declaring handover', proof.scan.verdict === 'clean')
+  await buyer.call('POST', `/transactions/${t1.publicId}/evidence`, proofBody, 403)
+  record('the buyer cannot add proof of delivery (403)', true)
+  await seller.call('POST', `/transactions/${t1.publicId}/evidence`, { ...proofBody, filename: 'bad.pdf', dataBase64: Buffer.from('%PDF-1.4\n<</S/JavaScript/JS(x)>>').toString('base64') }, 422)
+  record('delivery proof with a script is refused like any other file (422)', true)
+  const proofList = await buyer.call<{ files: Array<{ id: string; kind: string; uploadedBy: string }> }>('GET', `/transactions/${t1.publicId}/evidence`)
+  record('the buyer sees the seller proof of delivery in the list', proofList.files.some((f) => f.id === proof.id && f.kind === 'delivery' && f.uploadedBy === 'seller'))
+  const proofLink = await buyer.call<{ exp: number; sig: string }>('GET', `/transactions/${t1.publicId}/evidence?evidenceId=${proof.id}&link=1`)
+  const proofDl = await buyer.raw(`/transactions/${t1.publicId}/evidence?evidenceId=${proof.id}&exp=${proofLink.exp}&sig=${proofLink.sig}`)
+  record('the buyer opens the proof with a signed link and the bytes match', proofDl.status === 200 && Buffer.from(await proofDl.arrayBuffer()).toString('base64') === proofPdf)
+  await outsider.call('GET', `/transactions/${t1.publicId}/evidence`, undefined, 404)
+  record('a stranger cannot list the proof (404)', true)
+
   const sellerBefore = await publicClient.readContract({ address: ESCROW, abi: escrowAbi, functionName: 'claimable', args: [t1.id, seller.account.address] })
   record('seller can claim zero after declaring alone', sellerBefore === 0n)
   await send(buyer.account, 'buyer confirms acceptance (early)', () => wallet(buyer.account).writeContract({ address: ESCROW, abi: escrowAbi, functionName: 'confirmBuyerAcceptance', args: [t1.id] }))

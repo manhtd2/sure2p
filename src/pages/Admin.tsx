@@ -5,6 +5,7 @@ import { ArrowLeft, Gavel } from 'lucide-react'
 import { ChainAction } from '@/components/ChainAction'
 import { DecisionSummary } from '@/components/RulingPanel'
 import { EvidencePanel } from '@/components/EvidencePanel'
+import { DeliveryProofPanel } from '@/components/DeliveryProofPanel'
 import { HistoryList } from '@/components/HistoryList'
 import { AttachmentList } from '@/components/AttachmentList'
 import { PenaltyPanel } from '@/components/PenaltyPanel'
@@ -221,6 +222,7 @@ export function CaseDetailPage() {
             <p className="card p-5 text-sm text-[var(--muted)]">{tr('Vụ này đã bị kháng cáo. Appeal Reviewer sẽ ra phán quyết cuối cùng.', 'This case was appealed. The Appeal Reviewer will issue the final ruling.')}</p>
           )}
 
+          <DeliveryProofPanel publicId={v.publicId} viewer="admin" canUpload={false} hideWhenEmpty />
           <EvidencePanel publicId={v.publicId} canUpload={false} canAnchor={false} />
           <section className="card space-y-3 p-5">
             <h2 className="display text-lg font-semibold">{tr('Lịch sử trên chuỗi', 'Onchain history')}</h2>

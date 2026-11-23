@@ -9,6 +9,9 @@ export const docsEnB: Record<string, DocEn> = {
       { p: 'Goods are delivered outside the app. Once delivered, the seller declares handover. The declaration does not prove the buyer received anything and does not start the inspection window by itself.' },
       { p: 'The buyer confirms receipt (this starts the inspection window, 72 hours by default), then accepts that the goods match the agreement. If the buyer accepts before confirming receipt, the system records both moments in the same transaction.' },
       { ul: ['Only the seller declares handover.', 'Only the buyer confirms receipt and accepts.', 'Nobody can confirm on behalf of the other side.'] },
+      { h: "The seller's proof of delivery" },
+      { p: 'After declaring handover the seller can add up to 10 files (a screenshot, a receipt, a tracking number) for the buyer to look at before confirming receipt. The buyer gets a notification and can open each file with a short-lived link; the Arbiter and the Reviewer can see them too if there is a dispute.' },
+      { warn: 'This is supporting evidence only. sure2p does not deliver or verify goods and does not treat these files as proof that the buyer received anything. Files cannot be deleted once added; like every other file they are encrypted and get the basic check.' },
     ],
   },
   DOC11: {

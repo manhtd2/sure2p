@@ -14,6 +14,7 @@ import { EscrowActions } from './EscrowActions'
 import { HistoryList } from './HistoryList'
 import { Loader } from './Loader'
 import { EvidencePanel } from './EvidencePanel'
+import { DeliveryProofPanel } from './DeliveryProofPanel'
 import { ProgressTimeline } from './ProgressTimeline'
 import { RulingPanel } from './RulingPanel'
 import { SettlementPanel } from './SettlementPanel'
@@ -97,6 +98,14 @@ export function EscrowPanel({ publicId }: { publicId: string }) {
           {walletOk && wallet && !terminal && <EscrowActions view={v} chain={c} wallet={wallet} onChanged={refresh} />}
           {walletOk && (caseOpen || (terminal && v.ruling)) && <RulingPanel view={v} state={state} onChanged={refresh} />}
           {walletOk && settleable && <SettlementPanel view={v} onChanged={refresh} />}
+          {walletOk && c.sellerHandoverDeclared && (state === CHAIN_STATE.Active || caseOpen || terminal) && (
+            <DeliveryProofPanel
+              publicId={v.publicId}
+              viewer={v.myRole}
+              canUpload={v.myRole === 'seller' && (state === CHAIN_STATE.Active || caseOpen)}
+              hideWhenEmpty={terminal}
+            />
+          )}
           {walletOk && (caseOpen || (terminal && v.ruling)) && (
             <EvidencePanel publicId={v.publicId} onChainId={v.onChainId} canUpload={caseOpen} canAnchor={caseOpen} />
           )}

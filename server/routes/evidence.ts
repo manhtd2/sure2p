@@ -16,9 +16,14 @@ import { escrowAttachmentResponse } from '../lib/attachments.js'
 import { adminRoleOf, anchoredHashes } from '../lib/rulings.js'
 import { OPEN_CASE_STAGES, isPublicId } from '../../src/shared/protocol.js'
 import { memberEscrow, type EscrowRow } from './transactions.js'
+import { escrowAbi } from '../../src/shared/escrowAbi.js'
+import { publicClient } from '../indexer/index.js'
 
 export const MAX_EVIDENCE_BYTES = 2 * 1024 * 1024
 const MAX_FILES_PER_ESCROW = 25
+/** Proof of delivery the seller adds after declaring handover. Counted separately from case evidence. */
+const MAX_DELIVERY_PROOFS = 10
+const DELIVERY_STAGES = ['active', 'overdue', 'disputed', 'preliminary_ruling', 'appealed']
 /** Base64 inflates by 4/3 and the JSON wrapper adds a little. */
 const MAX_UPLOAD_BODY = Math.ceil((MAX_EVIDENCE_BYTES * 4) / 3) + 4096
 
@@ -26,6 +31,8 @@ const uploadSchema = z.object({
   filename: z.string().trim().min(1).max(120),
   mime: z.enum(ALLOWED_MIME),
   note: z.string().trim().max(500).optional(),
+  /** `delivery` = the seller's proof that goods were handed over; `evidence` = material for an open case. */
+  kind: z.enum(['evidence', 'delivery']).default('evidence'),
   dataBase64: z.string().min(1),
 })
 
@@ -39,9 +46,10 @@ interface EvidenceRow {
   sha256: string
   note: string | null
   created_at: number
+  kind: string
 }
 
-const META_COLUMNS = 'id, public_id, uploader_wallet, filename, mime, size, sha256, note, created_at'
+const META_COLUMNS = 'id, public_id, uploader_wallet, filename, mime, size, sha256, note, created_at, kind'
 
 async function loadEscrowRow(publicId: string): Promise<EscrowRow> {
   if (!isPublicId(publicId)) throw notFound()
@@ -53,6 +61,15 @@ async function loadEscrowRow(publicId: string): Promise<EscrowRow> {
   )
   if (!row) throw notFound()
   return row
+}
+
+async function handoverDeclaredOnchain(onChainId: string): Promise<boolean> {
+  try {
+    const e = (await publicClient.readContract({ address: env.escrow, abi: escrowAbi, functionName: 'getEscrow', args: [BigInt(onChainId)] })) as { sellerHandoverDeclared: boolean }
+    return e.sellerHandoverDeclared === true
+  } catch {
+    return false
+  }
 }
 
 /** A party of the escrow, or the onchain arbiter or appeal reviewer. Everyone else gets a uniform 404. */
@@ -82,6 +99,7 @@ export async function evidenceList(row: EscrowRow) {
     size: f.size,
     sha256: `0x${f.sha256}`,
     note: f.note,
+    kind: f.kind === 'delivery' ? ('delivery' as const) : ('evidence' as const),
     uploadedBy: getAddress(f.uploader_wallet) === getAddress(row.buyer_wallet) ? ('buyer' as const) : ('seller' as const),
     createdAt: f.created_at,
     anchored: anchored.get(`0x${f.sha256}`) ?? null,
@@ -110,27 +128,34 @@ route('GET', '/transactions/:publicId/evidence', async (ctx) => {
 })
 
 route('POST', '/transactions/:publicId/evidence', async (ctx) => {
-  const { row, wallet } = await memberEscrow(ctx, ctx.params.publicId)
+  const { row, wallet, role } = await memberEscrow(ctx, ctx.params.publicId)
   const account = requireSession(ctx).accountId
-  if (!OPEN_CASE_STAGES.includes(row.stage)) {
-    throw new HttpError(409, 'case_not_open', 'Evidence can only be added while the case is overdue, disputed or under ruling')
-  }
   rateLimit(`evidence:${account}`, 20, 600)
   const body = await ctx.body(uploadSchema, MAX_UPLOAD_BODY)
+  const kind = body.kind
+  if (kind === 'delivery') {
+    if (role !== 'seller') throw new HttpError(403, 'seller_only', 'Only the seller can add proof of delivery')
+    // The indexer can lag a few seconds behind the declaration, so ask the chain before saying no.
+    const declared = row.seller_declared_at !== null || (await handoverDeclaredOnchain(row.on_chain_id))
+    if (!declared) throw new HttpError(409, 'handover_not_declared', 'Declare the handover first, then add proof of delivery')
+    if (!DELIVERY_STAGES.includes(row.stage)) throw new HttpError(409, 'delivery_closed', 'Proof of delivery can no longer be added to this deal')
+  } else if (!OPEN_CASE_STAGES.includes(row.stage)) {
+    throw new HttpError(409, 'case_not_open', 'Evidence can only be added while the case is overdue, disputed or under ruling')
+  }
   const bytes = new Uint8Array(Buffer.from(body.dataBase64, 'base64'))
   if (bytes.length === 0) throw new HttpError(400, 'invalid_input', 'The file is empty')
   if (bytes.length > MAX_EVIDENCE_BYTES) throw new HttpError(413, 'too_large', 'File is larger than 2 MB')
   if (!matchesMime(bytes, body.mime)) throw new HttpError(400, 'invalid_file', 'The file content does not match its type')
   const scan = await scanOrReject({ bytes, mime: body.mime, account, scope: 'evidence', ownerRef: row.public_id })
   const sha256 = createHash('sha256').update(bytes).digest('hex')
-  const existing = await dbGet<{ id: string }>('SELECT id FROM evidence WHERE public_id = ? AND sha256 = ?', row.public_id, sha256)
+  const existing = await dbGet<{ id: string }>('SELECT id FROM evidence WHERE public_id = ? AND sha256 = ? AND kind = ?', row.public_id, sha256, kind)
   if (existing) return { id: existing.id, sha256: `0x${sha256}`, duplicate: true }
-  const count = await dbGet<{ n: number }>('SELECT COUNT(*) AS n FROM evidence WHERE public_id = ?', row.public_id)
-  if ((count?.n ?? 0) >= MAX_FILES_PER_ESCROW) throw new HttpError(409, 'too_many_files', 'This case already has the maximum number of files')
+  const count = await dbGet<{ n: number }>('SELECT COUNT(*) AS n FROM evidence WHERE public_id = ? AND kind = ?', row.public_id, kind)
+  if ((count?.n ?? 0) >= (kind === 'delivery' ? MAX_DELIVERY_PROOFS : MAX_FILES_PER_ESCROW)) throw new HttpError(409, 'too_many_files', 'This deal already has the maximum number of files of this kind')
   const id = randomToken(12)
   await dbRun(
-    `INSERT INTO evidence (id, public_id, uploader_wallet, uploader_account, filename, mime, size, sha256, note, content, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO evidence (id, public_id, uploader_wallet, uploader_account, filename, mime, size, sha256, note, content, created_at, kind)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     id,
     row.public_id,
     wallet,
@@ -142,6 +167,7 @@ route('POST', '/transactions/:publicId/evidence', async (ctx) => {
     body.note ?? null,
     new Uint8Array(0),
     nowSec(),
+    kind,
   )
   try {
     await vaultPut({ id, scope: 'evidence', ownerRef: row.public_id, sha256, bytes, scan })
@@ -149,7 +175,7 @@ route('POST', '/transactions/:publicId/evidence', async (ctx) => {
     await dbRun('DELETE FROM evidence WHERE id = ?', id)
     throw err
   }
-  await logFile(account, 'evidence', row.public_id, id, 'upload', { sha256, size: bytes.length, verdict: scan.verdict })
+  await logFile(account, 'evidence', row.public_id, id, 'upload', { sha256, size: bytes.length, verdict: scan.verdict, kind })
   return { id, sha256: `0x${sha256}`, duplicate: false, scan: { verdict: scan.verdict, reasons: scan.reasons } }
 })
 

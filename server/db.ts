@@ -229,7 +229,8 @@ CREATE TABLE IF NOT EXISTS evidence (
   sha256 TEXT NOT NULL,
   note TEXT,
   content BLOB NOT NULL,
-  created_at INTEGER NOT NULL
+  created_at INTEGER NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'evidence'
 );
 CREATE INDEX IF NOT EXISTS idx_evidence_public ON evidence(public_id, created_at);
 
@@ -497,6 +498,13 @@ export async function ensureSchema(): Promise<void> {
     schemaPromise = (async () => {
       const driver = await getDriver()
       await driver.exec(SCHEMA)
+      // Databases created before delivery proofs have no `kind` column. Safe to run on every cold start: a second
+      // instance racing us, or a database that already has the column, answers "duplicate column" and we move on.
+      try {
+        await driver.exec("ALTER TABLE evidence ADD COLUMN kind TEXT NOT NULL DEFAULT 'evidence'")
+      } catch (err) {
+        if (!/duplicate column|already exists/i.test(String(err))) throw err
+      }
     })()
   }
   return schemaPromise
