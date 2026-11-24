@@ -10,7 +10,6 @@ import { api, errorText } from '@/lib/api'
 import { CHAIN_ID } from '@/lib/contracts'
 import { useSession } from '@/hooks/useSession'
 import { parseTxError } from '@/hooks/useTx'
-import PerfectTransactionHero from '@/components/PerfectTransactionHero'
 
 interface OtpRequestResult {
   sent: boolean
@@ -30,10 +29,6 @@ export default function SignIn() {
   const [sent, setSent] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  // The page IS the perfect-transaction animation until the user starts
-  // logging in; then the login card takes over prominently and the
-  // animation is dimmed behind it so it cannot distract from the form.
-  const [showLogin, setShowLogin] = useState(false)
 
   const { address, isConnected, chainId } = useAccount()
   const { switchChainAsync } = useSwitchChain()
@@ -98,25 +93,9 @@ export default function SignIn() {
   }
 
   const step = !signedIn ? 1 : 2
-  // Once the user is mid-flow (OTP sent, or phone verified) the login card
-  // stays visible even if they never pressed the hero CTA.
-  const loginVisible = showLogin || signedIn || sent
-
   return (
-    <div className="signin-cosmic relative -mx-4 -my-6">
-      <div
-        className={
-          loginVisible
-            ? 'pointer-events-none absolute inset-0 overflow-hidden opacity-[0.14] transition-opacity duration-700'
-            : 'relative'
-        }
-        aria-hidden={loginVisible}
-      >
-        <PerfectTransactionHero onStartLogin={() => setShowLogin(true)} ctaVisible={!loginVisible} />
-      </div>
-
-      {loginVisible && (
-        <div className="relative z-10 mx-auto flex min-h-[560px] w-full max-w-md flex-col justify-center px-4 py-10 sm:min-h-[620px]">
+    <div className="mx-auto w-full max-w-md py-6">
+      <div>
           <div className="space-y-4">
             <div>
               <h1 className="display text-3xl font-bold">{tr('Đăng nhập', 'Sign in')}</h1>
@@ -225,15 +204,8 @@ export default function SignIn() {
                 {error}
               </p>
             )}
-
-            {!signedIn && !sent && (
-              <button type="button" className="w-full text-center text-xs text-[var(--muted)] underline" onClick={() => setShowLogin(false)}>
-                {tr('← Xem lại animation giao dịch mẫu', '← Watch the sample transaction animation again')}
-              </button>
-            )}
           </div>
-        </div>
-      )}
+      </div>
     </div>
   )
 }

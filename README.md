@@ -63,7 +63,7 @@ See [`DEPLOY_VERCEL.md`](DEPLOY_VERCEL.md) for the exact step-by-step: create a 
 
 ## Interface notes
 
-- Sign-in (`/signin`) opens with the cosmic perfect-transaction animation — one full loop, a 5-second hold, then repeat. When you start logging in, the animation dims behind a prominent glass login card. The auth flow itself is unchanged (phone + OTP, then wallet + EIP-4361 signature).
+- Sign-in (`/sign-in`) shows the login card straight away: phone + OTP, then wallet + EIP-4361 signature.
 - After login, the transaction list (`/transactions`) is the main page — no dashboard. It filters by role (Buyer / Seller) and by status, and each card shows the deadline and the next step prominently.
 
 Commands:
