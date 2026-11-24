@@ -9,36 +9,12 @@ import type { ListItem } from '@/lib/types'
 import { DeleteDraftButton } from '@/components/DeleteDraftButton'
 import { StageChip } from '@/components/StageChip'
 import { useNow } from '@/hooks/useNow'
+import { useNotifications } from '@/components/NotificationBell'
 
-type RoleFilter = 'all' | 'buyer' | 'seller'
-type StatusFilter = 'all' | 'pending' | 'funding' | 'active' | 'disputed' | 'completed' | 'expired'
-
-function statusOf(item: ListItem): StatusFilter {
-  if (item.kind === 'draft') return 'pending'
-  switch (item.stage) {
-    case 'funding':
-      return 'funding'
-    case 'active':
-      return 'active'
-    case 'disputed':
-    case 'overdue':
-      return 'disputed'
-    case 'completed':
-    case 'settled':
-      return 'completed'
-    case 'expired_unfunded':
-      return 'expired'
-    default:
-      return 'pending'
-  }
-}
+import { matchesStatus, type RoleFilter, type StatusFilter } from '@/lib/txFilters'
 
 function matchesRole(role: RoleFilter, item: ListItem): boolean {
   return role === 'all' || item.myRole === role
-}
-
-function matchesStatus(status: StatusFilter, item: ListItem): boolean {
-  return status === 'all' || statusOf(item) === status
 }
 
 /**
@@ -95,8 +71,13 @@ function nextStep(item: ListItem, tr: (vi: string, en: string) => string): { lab
     case 'overdue':
     case 'disputed':
       return { label: tr('Mở đề xuất dàn xếp chung', 'Open a mutual settlement proposal'), mine: true }
+    case 'preliminary_ruling':
+      return { label: tr('Xem phán quyết sơ bộ, kháng cáo nếu cần', 'Read the preliminary ruling, appeal if needed'), mine: true }
+    case 'appealed':
+      return { label: tr('Chờ người xem xét kháng cáo', 'Waiting for the appeal reviewer'), mine: false }
     case 'completed':
     case 'settled':
+    case 'ruled':
       return { label: tr('Xem và claim tiền của bạn', 'View and claim your funds'), mine: true }
     case 'expired_unfunded':
       return { label: tr('Đã hết hạn — tạo giao dịch mới', 'Expired — create a new transaction'), mine: false }
@@ -125,6 +106,8 @@ export default function Transactions() {
     refetchInterval: 8000,
   })
   const items = data?.items ?? []
+  // Finished deals are hidden from the default tab, so say so when one still has money waiting to be claimed.
+  const unclaimed = (useNotifications(true).data?.todos ?? []).filter((t) => t.kind === 'claim').length
 
   const roleOptions: Array<[RoleFilter, string]> = [
     ['all', tr('Tất cả vai trò', 'All roles')],
@@ -132,7 +115,7 @@ export default function Transactions() {
     ['seller', tr('Tôi là Seller', 'I am Seller')],
   ]
   const statusOptions: Array<[StatusFilter, string]> = [
-    ['all', tr('Tất cả trạng thái', 'All statuses')],
+    ['all', tr('Tất cả giao dịch', 'All transactions')],
     ['pending', tr('Chờ lời mời', 'Pending invitation')],
     ['funding', tr('Đang nạp tiền', 'Funding')],
     ['active', tr('Đang hoạt động', 'Active')],
@@ -195,6 +178,19 @@ export default function Transactions() {
         </div>
       </div>
 
+      <p className="text-xs text-[var(--muted)]">
+        {status === 'all'
+          ? tr('Gồm lời mời đang chờ, giao dịch đang diễn ra và sắp diễn ra. Giao dịch đã hoàn tất nằm ở mục Hoàn tất; giao dịch hết hạn nằm ở mục Hết hạn.', 'Pending invitations and deals that are running or about to start. Finished deals are under Completed; expired ones under Expired.')
+          : status === 'completed'
+            ? tr('Giao dịch đã kết thúc: chốt hoàn thành, thỏa thuận chung hoặc phán quyết cuối. Tiền chờ nhận vẫn cần ví của bạn nhận.', 'Finished deals: completed, mutually settled or ruled. Credited money still needs your wallet to claim it.')
+            : null}
+      </p>
+      {status === 'all' && unclaimed > 0 && (
+        <button type="button" onClick={() => setStatus('completed')} className="card flex w-full items-center justify-between gap-3 p-3 text-left text-sm">
+          <span>{tr(`Bạn có ${unclaimed} giao dịch đã hoàn tất còn tiền chờ nhận.`, `You have ${unclaimed} finished deal(s) with money waiting to be claimed.`)}</span>
+          <span className="shrink-0 font-semibold underline">{tr('Mở mục Hoàn tất', 'Open Completed')}</span>
+        </button>
+      )}
       {isLoading && (
         <div className="flex justify-center py-16 text-[var(--muted)]">
           <Loader2 className="size-5 animate-spin" />
